@@ -9,8 +9,3 @@ variable "s3_bucket_name" {
   type        = string
 }
 
-variable "dynamodb_table_name" {
-  description = "The name of the DynamoDB table for Terraform state locking."
-  type        = string
-  default     = "terraform-state-lock"
-}
