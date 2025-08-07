@@ -7,7 +7,7 @@ variable "region" {
 variable "project" {
   description = "The AWS region to create resources in."
   type        = string
-  default     = "SS-86"
+  default     = "SS86"
 }
 
 ########### VPC variables ############################
