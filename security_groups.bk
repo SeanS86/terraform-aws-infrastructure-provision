@@ -1,0 +1,6 @@
+module "sg" {
+  source = "./modules/security_groups"
+
+  cloud_region  = var.region
+
+}
