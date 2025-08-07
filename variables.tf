@@ -38,3 +38,12 @@ variable "availability_zone1" {
 variable "availability_zone2" {
   type = string
 }
+
+#################### SG variables  #######################
+variable "vpc_id" {
+  type = string
+}
+
+variable "tools_ec2_ip" {
+  type = string
+}
