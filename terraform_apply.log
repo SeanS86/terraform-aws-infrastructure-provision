@@ -106,10 +106,13 @@ all_public_subnet_ids = [
   "subnet-08347d360ef20883e",
 ]
 internet_gateway_id = "igw-068867e8439a42b8e"
-jump_box_id = "i-0139e554f764f9528"
-jump_box_public_ip = "54.194.106.140"
-k8s_node1_id = "i-0b2e0e59d2805710f"
-k8s_node2_id = "i-01fcd5abf30dd755b"
+jump_box_id = "i-05694a47b6c9c315d"
+jump_box_private_ip = "172.18.1.112"
+jump_box_public_ip = "34.249.158.206"
+k8s_node1_id = "i-03240fbe177d073ce"
+k8s_node1_private_ip = "172.18.3.220"
+k8s_node2_id = "i-049bb859e5b6f8550"
+k8s_node2_private_ip = "172.18.4.39"
 nat_gateway_eip_public_ip = "54.154.31.71"
 nat_gateway_id = "nat-04d2f96b41b9d5e0f"
 nat_gateway_public_subnet_id = "subnet-07eb63bcd09f5ce75"
