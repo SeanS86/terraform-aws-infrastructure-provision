@@ -1,49 +1,48 @@
-terraform {
-  required_version = ">= 1.0.0"
-  required_providers {
-    aws = {
-      source = "hashicorp/aws"
-      version = "~> 4.0"
-    }
-  }
-}
-
 provider "aws" {
-  region = "eu-west-1"
+  region = "eu-west-1" # This might be inherited if this code is part of a larger configuration/module
 }
-
+# --- EC2 Instances ---
 resource "aws_instance" "jump_box" {
-  ami           = var.ami_id
-  instance_type = var.instance_type
-  subnet_id     = var.public_subnet_id
+  ami                    = var.ami_id
+  instance_type          = var.instance_type
+  subnet_id              = var.public_subnet_id
   vpc_security_group_ids = [var.sg1_id]
   key_name               = var.key_name
+  # associate_public_ip_address = true # Add this if your jump box needs a public IP and your public subnet doesn't auto-assign them
 
   tags = {
-    Name = "jump-box"
+    Name    = "${var.project_name}-jump-box"
+    Project = var.project_name
+    Role    = "JumpBox" # Example of another useful descriptive tag
   }
 }
 
 resource "aws_instance" "k8s_node1" {
-  ami           = var.ami_id
-  instance_type = var.instance_type
-  subnet_id     = var.private_subnet_id
+  ami                    = var.ami_id
+  instance_type          = var.instance_type
+  subnet_id              = var.private_subnet1_id
   vpc_security_group_ids = [var.sg2_id]
   key_name               = var.key_name
 
   tags = {
-    Name = "k8s-node1"
+    Name    = "${var.project_name}-k8s-node1"
+    Project = var.project_name
+    Role    = "KubernetesNode"
+    Index   = "1" # identify nodes by index
   }
 }
 
 resource "aws_instance" "k8s_node2" {
-  ami           = var.ami_id
-  instance_type = var.instance_type
-  subnet_id     = var.private_subnet_id2
+  ami                    = var.ami_id
+  instance_type          = var.instance_type
+  subnet_id              = var.private_subnet2_id
   vpc_security_group_ids = [var.sg2_id]
   key_name               = var.key_name
 
   tags = {
-    Name = "k8s-node2"
+    Name    = "${var.project_name}-k8s-node2"
+    Project = var.project_name
+    Role    = "KubernetesNode"
+    Index   = "2" # Example
   }
 }

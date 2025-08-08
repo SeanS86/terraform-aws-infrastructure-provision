@@ -2,11 +2,6 @@ provider "aws" {
   region = "eu-west-1"
 }
 
-variable "project_name" {
-  description = "The name of the project for tagging resources."
-  type        = string
-}
-
 resource "aws_security_group" "sg1" {
   name        = "${var.project_name}-sg1-bastion-access"
   description = "Allow SSH from Tools EC2 to Bastion/Jumpbox"

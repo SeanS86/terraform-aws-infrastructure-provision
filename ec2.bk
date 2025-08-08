@@ -1,6 +1,0 @@
-module "ec2" {
-  source = "./modules/ec2"
-
-  cloud_region  = var.region
-
-}
