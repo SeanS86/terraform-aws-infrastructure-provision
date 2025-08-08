@@ -15,6 +15,4 @@ availability_zone2        = "eu-west-1b"
 tools_ec2_ip              = "172.19.0.96/32"
 
 ####################### EC2 variables ############
-ami_id               = "ami-xxxxxxxxxxxxxxxxx" // will I have to create it
-instance_type        = "t3.medium"
-key_name             = "my-ec2-keypair"           // Your EC2 key pair name
+ami_id               = "ami-0b221b3f0d70fd316ubuntu" // the same ami for the preprovisioned EC2

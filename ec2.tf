@@ -10,6 +10,4 @@ module "ec2" {
   private_subnet2_id   = module.vpc.private_subnet2_id
   sg1_id               = module.sg.sg1_id
   sg2_id               = module.sg.sg2_id
-  key_name             = "my-ec2-keypair"
-
 }

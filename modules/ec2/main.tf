@@ -1,13 +1,18 @@
 provider "aws" {
   region = "eu-west-1" # This might be inherited if this code is part of a larger configuration/module
 }
+
+resource "aws_key_pair" "imported_tf_managed" {
+  key_name   = "tf-managed-key"
+  public_key = file("./files/id_rsa.pub") # encrypted with ansible-vault
+}
 # --- EC2 Instances ---
 resource "aws_instance" "jump_box" {
   ami                    = var.ami_id
   instance_type          = var.instance_type
   subnet_id              = var.public_subnet_id
   vpc_security_group_ids = [var.sg1_id]
-  key_name               = var.key_name
+  key_name               = aws_key_pair.imported_tf_managed.key_name
   # associate_public_ip_address = true # Add this if your jump box needs a public IP and your public subnet doesn't auto-assign them
 
   tags = {
@@ -22,13 +27,13 @@ resource "aws_instance" "k8s_node1" {
   instance_type          = var.instance_type
   subnet_id              = var.private_subnet1_id
   vpc_security_group_ids = [var.sg2_id]
-  key_name               = var.key_name
+  key_name               = aws_key_pair.imported_tf_managed.key_name
 
   tags = {
     Name    = "${var.project_name}-k8s-node1"
     Project = var.project_name
     Role    = "KubernetesNode"
-    Index   = "1" # identify nodes by index
+    Index   = "1" # identify K8s nodes by index
   }
 }
 
@@ -37,12 +42,12 @@ resource "aws_instance" "k8s_node2" {
   instance_type          = var.instance_type
   subnet_id              = var.private_subnet2_id
   vpc_security_group_ids = [var.sg2_id]
-  key_name               = var.key_name
+  key_name               = aws_key_pair.imported_tf_managed.key_name
 
   tags = {
     Name    = "${var.project_name}-k8s-node2"
     Project = var.project_name
     Role    = "KubernetesNode"
-    Index   = "2" # Example
+    Index   = "2" # identify K8s nodes by index
   }
 }

@@ -37,8 +37,3 @@ variable "sg2_id" {
   description = "The ID of the security group for the Kubernetes nodes (sg2)."
   type        = string
 }
-
-variable "key_name" {
-  description = "The name of the EC2 key pair to use for SSH access."
-  type        = string
-}
