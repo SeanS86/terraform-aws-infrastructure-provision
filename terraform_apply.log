@@ -97,7 +97,48 @@ Apply complete! Resources: 31 added, 0 changed, 0 destroyed.
 
 Outputs:
 
-jump_box_public_ip = "54.194.106.140"
+all_private_subnet_ids = [
+  "subnet-0c7a435ff04846dda",
+  "subnet-0d1e211a431e06463",
+]
+all_public_subnet_ids = [
+  "subnet-07eb63bcd09f5ce75",
+  "subnet-08347d360ef20883e",
+]
+internet_gateway_id = "igw-068867e8439a42b8e"
+k8s_node1_id = "i-0b2e0e59d2805710f"
 k8s_node1_private_ip = "172.18.3.23"
+k8s_node2_id = "i-01fcd5abf30dd755b"
+k8s_node2_private_ip = "172.18.4.170"
+nat_gateway_eip_public_ip = "54.154.31.71"
+nat_gateway_id = "nat-04d2f96b41b9d5e0f"
+nat_gateway_public_subnet_id = "subnet-07eb63bcd09f5ce75"
 nlb_dns_name = "Ss86-nlb-e3b661017739f32c.elb.eu-west-1.amazonaws.com"
+nlb_zone_id = "Z2IFOLAFXWLO4F"
+private_route_table_id = "rtb-06161833a420f9546"
+private_subnet1_arn = "arn:aws:ec2:eu-west-1:723307514167:subnet/subnet-0c7a435ff04846dda"
+private_subnet1_availability_zone = "eu-west-1a"
+private_subnet1_cidr_block = "172.18.3.0/24"
+private_subnet1_id = "subnet-07eb63bcd09f5ce75"
+private_subnet2_arn = "arn:aws:ec2:eu-west-1:723307514167:subnet/subnet-0d1e211a431e06463"
+private_subnet2_availability_zone = "eu-west-1b"
+private_subnet2_cidr_block = "172.18.4.0/24"
+private_subnet2_id = "subnet-0d1e211a431e06463"
+public_route_table_id = "rtb-040a80324b9cd49b8"
+public_subnet1_arn = "arn:aws:ec2:eu-west-1:723307514167:subnet/subnet-0c7a435ff04846dda"
+public_subnet1_availability_zone = "eu-west-1a"
+public_subnet1_cidr_block = "172.18.1.0/24"
+public_subnet1_id = "subnet-07eb63bcd09f5ce75"
+public_subnet2_arn = "arn:aws:ec2:eu-west-1:723307514167:subnet/subnet-08347d360ef20883e"
+public_subnet2_availability_zone = "eu-west-1b"
+public_subnet2_cidr_block = "172.18.10.0/24"
+public_subnet2_id = "subnet-08347d360ef20883e"
+sg1_id = "sg-0ba04c8dfa841071a"
+sg2_id = "sg-0589df93864dbfd13"
+vpc_arn = "arn:aws:ec2:eu-west-1:723307514167:vpc/vpc-00da8dfd5479ccb03"
+vpc_cidr_block = "172.18.0.0/16"
+vpc_default_network_acl_id = "acl-0e02976b351043101"
+vpc_default_route_table_id = "rtb-0311067dbdd9f5129"
+vpc_default_security_group_id = "sg-070b77e580ebf7844"
 vpc_id = "vpc-00da8dfd5479ccb03"
+
