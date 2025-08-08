@@ -101,7 +101,27 @@ Perform these steps from the **control-plane node** or any machine configured wi
 ### Configuring `kubectl` Access
 To use `kubectl` from a machine other than the control-plane node (e.g., the Jump Box):
 1.  Copy the kubeconfig file from the control-plane node:
+To manage your Kubernetes cluster from a remote machine using `kubectl`, you need the `kubeconfig` file. This file contains the cluster connection information and credentials.
+
+The primary administrative `kubeconfig` file on a control-plane node initialized with `kubeadm` is located at:
+
+*   `/etc/kubernetes/admin.conf`
+
+This file grants cluster-admin privileges and is typically the one you'll want to copy for external administrative access.
+
+
 2.  On the Jump Box (or your local machine):
+Once you have obtained the `admin.conf` file from your control-plane node, you can use it to access your Kubernetes cluster from a Jump Box or your local machine using `kubectl`.
+
+The `admin.conf` file should typically be placed at `~/.kube/config` on the machine where you intend to run `kubectl` commands, or its path should be pointed to by the `KUBECONFIG` environment variable.
+
+- **Set the `KUBECONFIG` Environment Variable (if not using the default path):**
+    If you've placed the configuration file at a location other than `~/.kube/config`, or if you manage multiple cluster configurations, you'll need to tell `kubectl` where to find it.
+
+- **To test**
+    `kubectl get nodes -o wide`
+    `kubectl get pods -A`
+    `kubectl get top pods -A`
 
 ## Phase 5: Accessing the Kubernetes Dashboard
 
