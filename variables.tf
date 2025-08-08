@@ -49,3 +49,5 @@ variable "ami_id" {
   description = "The ID of the AMI to use for the EC2 instances."
   type        = string
 }
+
+################# Load balancer variables  ################
