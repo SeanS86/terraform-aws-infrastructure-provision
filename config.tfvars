@@ -12,4 +12,4 @@ availability_zone1        = "eu-west-1a"
 availability_zone2        = "eu-west-1b"
 
 ####################### SG variables  #################
-tools_ec2_ip              = "172.19.0.96"
+tools_ec2_ip              = "172.19.0.96/32"
