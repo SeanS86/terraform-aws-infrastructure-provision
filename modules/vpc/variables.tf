@@ -1,3 +1,8 @@
+variable "project_name" {
+  description = "The AWS region to create resources in."
+  type        = string
+  default     = "SS-86"
+}
 
 variable "vpc_cidr" {
 type = string
