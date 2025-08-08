@@ -6,6 +6,10 @@ output "jump_box_public_ip" {
   value = aws_instance.jump_box.public_ip
 }
 
+output "jump_box_private_ip" {
+  value = aws_instance.jump_box.private_ip
+}
+
 output "k8s_node1_id" {
   value = aws_instance.k8s_node1.id
 }

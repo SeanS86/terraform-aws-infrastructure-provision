@@ -183,3 +183,12 @@ output "sg1_id" {
 output "sg2_id" {
   value = module.sg.sg2_id
 }
+output "k8s_node1_private_ip" {
+  value = module.ec2.k8s_node1_private_ip
+}
+output "k8s_node2_private_ip" {
+  value = module.ec2.k8s_node2_private_ip
+}
+output "jump_box_private_ip" {
+  value = module.ec2.jump_box_private_ip
+}
