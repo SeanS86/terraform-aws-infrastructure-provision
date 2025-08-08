@@ -13,12 +13,12 @@ resource "aws_instance" "jump_box" {
   subnet_id              = var.public_subnet_id
   vpc_security_group_ids = [var.sg1_id]
   key_name               = aws_key_pair.imported_tf_managed.key_name
-  # associate_public_ip_address = true # Add this if your jump box needs a public IP and your public subnet doesn't auto-assign them
+  associate_public_ip_address = true
 
   tags = {
     Name    = "${var.project_name}-jump-box"
     Project = var.project_name
-    Role    = "JumpBox" # Example of another useful descriptive tag
+    Role    = "JumpBox"
   }
 }
 
