@@ -16,3 +16,5 @@ tools_ec2_ip              = "172.19.0.96/32"
 
 ####################### EC2 variables ############
 ami_id               = "ami-0035bf78038353f25" // A public Amazon owned EKS node image
+
+######################## Load_balancer variables  ######################
