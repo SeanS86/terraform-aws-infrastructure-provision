@@ -1,6 +1,6 @@
 # terraform-aws-infrastructure-provision
 
-This Terraform project provisions the foundational AWS infrastructure required to later deploy a Kubernetes cluster. It sets up networking (VPC, subnets, gateways), security groups, EC2 instances (including a jump box), and a Network Load Balancer in the `eu-west-1` AWS region.
+This Terraform project provisions the foundational AWS infrastructure required to later deploy a Kubernetes cluster. It sets up networking (VPC, subnets, gateways), security groups, three EC2 instances (2 k8s nodes plus a jump box), and a Network Load Balancer in the `eu-west-1` AWS region.
 
 ## Project Structure
 
