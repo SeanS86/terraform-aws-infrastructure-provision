@@ -121,6 +121,14 @@ output "all_private_subnet_ids" {
   value       = [module.vpc.private_subnet1_id, module.vpc.private_subnet2_id]
 }
 
+output "jump_box_id" {
+  value = module.ec2.jump_box_id
+}
+
+output "jump_box_public_ip" {
+  value = module.ec2.jump_box_public_ip
+}
+
 # --- Internet Gateway Outputs ---
 output "internet_gateway_id" {
   description = "The ID of the Internet Gateway."
@@ -157,17 +165,10 @@ output "k8s_node1_id" {
   value = module.ec2.k8s_node1_id
 }
 
-output "k8s_node1_private_ip" {
-  value = module.ec2.k8s_node1_private_ip
-}
-
 output "k8s_node2_id" {
   value = module.ec2.k8s_node2_id
 }
 
-output "k8s_node2_private_ip" {
-  value = module.ec2.k8s_node2_private_ip
-}
 output "nlb_dns_name" {
   value = module.load_balancer.nlb_dns_name
 }
