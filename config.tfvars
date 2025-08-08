@@ -12,7 +12,7 @@ availability_zone1        = "eu-west-1a"
 availability_zone2        = "eu-west-1b"
 
 ####################### SG variables  #################
-tools_ec2_ip              = "172.19.0.96/32"
+tools_ec2_ip              = "3.255.177.47/32"
 
 ####################### EC2 variables ############
 ami_id               = "ami-0035bf78038353f25" // A public Amazon owned EKS node image
