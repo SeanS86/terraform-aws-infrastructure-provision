@@ -15,6 +15,6 @@ availability_zone2        = "eu-west-1b"
 tools_ec2_ip              = "3.255.177.47/32"
 
 ####################### EC2 variables ############
-ami_id               = "ami-003618576a2dbf58c" // an Ubuntu 22.04 LTS amd64
+ami_id               = "ami-0043735dd4439caed" // an Ubuntu 22.04 LTS amd64
 
 ######################## Load_balancer variables  ######################
