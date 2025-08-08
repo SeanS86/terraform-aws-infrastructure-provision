@@ -118,9 +118,9 @@ The `admin.conf` file should typically be placed at `~/.kube/config` on the mach
 - **Set the `KUBECONFIG` Environment Variable (if not using the default path):**
     If you've placed the configuration file at a location other than `~/.kube/config`, or if you manage multiple cluster configurations, you'll need to tell `kubectl` where to find it.
 
-- **To test**
-    `kubectl get nodes -o wide`
-    `kubectl get pods -A`
+- **To test:**
+    `kubectl get nodes -o wide`,
+    `kubectl get pods -A`,
     `kubectl get top pods -A`
 
 ## Phase 5: Accessing the Kubernetes Dashboard
@@ -145,8 +145,3 @@ This method makes the dashboard accessible on `localhost` via the `kubectl` util
 ## Expected Terminal Outputs
 
 *(This section is a placeholder. You need to capture the actual output from your cluster after successful deployment and paste it here within code blocks.)*
-
-<a name="kubectl-get-nodes--o-wide"></a>
-### `kubectl get nodes -o wide`
-<a name="kubectl-get-pods--a"></a>
-### `kubectl get pods -A`
