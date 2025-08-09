@@ -101,8 +101,8 @@ jobs:
           fi
 
           REPO_NAME=$(echo "${{ github.repository }}" | cut -d'/' -f2)
-          RUN_ID="${{ github.run_id }}"
-          REMOTE_PROJECT_PATH="/home/${EC2_USER_VAL}/terraform_runs/${REPO_NAME}/${BRANCH_NAME_SLUG_FROM_SYNC}/${RUN_ID}"
+          RUN_ID_FROM_SYNC="${{ steps.sync.outputs.run_id_out }}" # Use run_id from sync step
+          REMOTE_PROJECT_PATH="/home/${EC2_USER_VAL}/terraform_runs/${REPO_NAME}/${BRANCH_NAME_SLUG_FROM_SYNC}/${RUN_ID_FROM_SYNC}"
           TERRAFORM_DIR_IN_REPO="."
 
           ENCRYPTED_FILE_RELATIVE_PATH="modules/ec2/files/id_rsa.pub"
@@ -114,16 +114,28 @@ jobs:
 
           SSH_COMMANDS="
           set -e
-          cd ${REMOTE_PROJECT_PATH}/${TERRAFORM_DIR_IN_REPO}
+          cd \"${REMOTE_PROJECT_PATH}/${TERRAFORM_DIR_IN_REPO}\" # Added quotes for safety
 
           echo 'Creating directory for decrypted file if it does not exist: ${DECRYPTED_FILE_DIR_ON_EC2}'
-          mkdir -p ${DECRYPTED_FILE_DIR_ON_EC2}
+          mkdir -p \"${DECRYPTED_FILE_DIR_ON_EC2}\" # Added quotes
 
-          echo 'Decrypting file: ${ENCRYPTED_FILE_ON_EC2} to ${DECRYPTED_FILE_ON_EC2}'
-          echo '\$VAULT_PASSWORD' | ansible-vault decrypt '${ENCRYPTED_FILE_ON_EC2}' --output '${DECRYPTED_FILE_ON_EC2}'
+          # Create a temporary vault password file
+          VAULT_PASS_FILE=\$(mktemp)
+          echo \"Preparing to write vault password to \$VAULT_PASS_FILE\"
+          echo \"\$VAULT_PASSWORD\" > \"\$VAULT_PASS_FILE\"
+          chmod 600 \"\$VAULT_PASS_FILE\"
+          echo \"Vault password written to \$VAULT_PASS_FILE\"
+
+          echo 'Decrypting file: ${ENCRYPTED_FILE_ON_EC2} to ${DECRYPTED_FILE_ON_EC2} using password file'
+          ansible-vault decrypt --vault-password-file=\"\$VAULT_PASS_FILE\" \"${ENCRYPTED_FILE_ON_EC2}\" --output \"${DECRYPTED_FILE_ON_EC2}\" # Added quotes
+          
+          # Clean up the temporary vault password file immediately
+          echo \"Removing temporary vault password file: \$VAULT_PASS_FILE\"
+          rm -f \"\$VAULT_PASS_FILE\"
+          echo \"Temporary vault password file removed.\"
           
           echo 'Decryption complete. Verifying decrypted file exists...'
-          if [ ! -f '${DECRYPTED_FILE_ON_EC2}' ]; then
+          if [ ! -f \"${DECRYPTED_FILE_ON_EC2}\" ]; then # Added quotes
             echo '::error::Decrypted file ${DECRYPTED_FILE_ON_EC2} not found after decryption attempt!'
             exit 1
           fi
@@ -148,12 +160,12 @@ jobs:
           echo "--- End of Terraform Plan Output ---"
 
           PLAN_SUMMARY=$(cat plan_output.txt)
-          CLEANED_PLAN_SUMMARY=$(echo "${PLAN_SUMMARY}" | sed "s/${VAULT_PASSWORD}/**********/g") # Basic cleaning
+          CLEANED_PLAN_SUMMARY=$(echo "${PLAN_SUMMARY}" | sed "s/${VAULT_PASSWORD}/**********/g")
           echo "plan_summary_env<<EOF" >> $GITHUB_ENV
           echo "${CLEANED_PLAN_SUMMARY}" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
-          if ssh -o StrictHostKeyChecking=yes "${EC2_USER_VAL}@${EC2_HOST_VAL}" "[ -f ${REMOTE_PROJECT_PATH}/${TERRAFORM_DIR_IN_REPO}/tfplan ]"; then
+          if ssh -o StrictHostKeyChecking=yes "${EC2_USER_VAL}@${EC2_HOST_VAL}" "[ -f \"${REMOTE_PROJECT_PATH}/${TERRAFORM_DIR_IN_REPO}/tfplan\" ]"; then # Added quotes
             echo "tfplan_exists=true" >> $GITHUB_OUTPUT
           else
             echo "tfplan_exists=false" >> $GITHUB_OUTPUT
@@ -186,8 +198,8 @@ jobs:
 
           echo "User selected 'apply'. Proceeding to Terraform Apply."
           REPO_NAME=$(echo "${{ github.repository }}" | cut -d'/' -f2)
-          RUN_ID="${{ github.run_id }}"
-          REMOTE_PROJECT_PATH="/home/${EC2_USER_VAL}/terraform_runs/${REPO_NAME}/${BRANCH_NAME_SLUG_FROM_SYNC}/${RUN_ID}"
+          RUN_ID_FROM_SYNC="${{ steps.sync.outputs.run_id_out }}" # Use run_id from sync step
+          REMOTE_PROJECT_PATH="/home/${EC2_USER_VAL}/terraform_runs/${REPO_NAME}/${BRANCH_NAME_SLUG_FROM_SYNC}/${RUN_ID_FROM_SYNC}"
           TERRAFORM_DIR_IN_REPO="."
           
           ENCRYPTED_FILE_RELATIVE_PATH="modules/ec2/files/id_rsa.pub"
@@ -199,14 +211,26 @@ jobs:
 
           SSH_APPLY_COMMANDS="
           set -e
-          cd ${REMOTE_PROJECT_PATH}/${TERRAFORM_DIR_IN_REPO}
+          cd \"${REMOTE_PROJECT_PATH}/${TERRAFORM_DIR_IN_REPO}\" # Added quotes
 
           echo 'Ensuring directory for decrypted file exists for apply: ${DECRYPTED_FILE_DIR_ON_EC2}'
-          mkdir -p ${DECRYPTED_FILE_DIR_ON_EC2}
+          mkdir -p \"${DECRYPTED_FILE_DIR_ON_EC2}\" # Added quotes
+
+          # Create a temporary vault password file
+          VAULT_PASS_FILE_APPLY=\$(mktemp) # Use a different var name to avoid potential clashes if scripts were merged
+          echo \"Preparing to write vault password to \$VAULT_PASS_FILE_APPLY for apply\"
+          echo \"\$VAULT_PASSWORD\" > \"\$VAULT_PASS_FILE_APPLY\"
+          chmod 600 \"\$VAULT_PASS_FILE_APPLY\"
+          echo \"Vault password written to \$VAULT_PASS_FILE_APPLY for apply\"
 
           echo 'Re-decrypting file for apply consistency (if needed): ${ENCRYPTED_FILE_ON_EC2}'
-          echo '\$VAULT_PASSWORD' | ansible-vault decrypt '${ENCRYPTED_FILE_ON_EC2}' --output '${DECRYPTED_FILE_ON_EC2}'
+          ansible-vault decrypt --vault-password-file=\"\$VAULT_PASS_FILE_APPLY\" \"${ENCRYPTED_FILE_ON_EC2}\" --output \"${DECRYPTED_FILE_ON_EC2}\" # Added quotes
           
+          # Clean up the temporary vault password file immediately
+          echo \"Removing temporary vault password file for apply: \$VAULT_PASS_FILE_APPLY\"
+          rm -f \"\$VAULT_PASS_FILE_APPLY\"
+          echo \"Temporary vault password file for apply removed.\"
+
           echo 'Applying Terraform configuration using the generated tfplan...'
           terraform apply -input=false -auto-approve tfplan 
           "
@@ -222,17 +246,19 @@ jobs:
           EC2_USER_VAL="${{ secrets.EC2_USER }}"
           EC2_HOST_VAL="${{ secrets.EC2_HOST }}"
           BRANCH_NAME_SLUG_FROM_SYNC="${{ steps.sync.outputs.branch_name_slug_out }}"
+          RUN_ID_FROM_SYNC="${{ steps.sync.outputs.run_id_out }}" # Use run_id from sync step for consistency
 
-          if [ -z "$BRANCH_NAME_SLUG_FROM_SYNC" ] || [ -z "$EC2_USER_VAL" ] || [ -z "$EC2_HOST_VAL" ]; then
+          if [ -z "$BRANCH_NAME_SLUG_FROM_SYNC" ] || [ -z "$EC2_USER_VAL" ] || [ -z "$EC2_HOST_VAL" ] || [ -z "$RUN_ID_FROM_SYNC" ]; then
             echo "::warning::Skipping cleanup as critical variables are missing."
             exit 0
           fi
 
           REPO_NAME=$(echo "${{ github.repository }}" | cut -d'/' -f2)
-          RUN_ID="${{ github.run_id }}"
-          REMOTE_PROJECT_PATH="/home/${EC2_USER_VAL}/terraform_runs/${REPO_NAME}/${BRANCH_NAME_SLUG_FROM_SYNC}/${RUN_ID}"
+          # Construct the exact path that was used in the plan/apply steps
+          REMOTE_PROJECT_PATH="/home/${EC2_USER_VAL}/terraform_runs/${REPO_NAME}/${BRANCH_NAME_SLUG_FROM_SYNC}/${RUN_ID_FROM_SYNC}"
 
           echo "Cleaning up remote directory: ${REMOTE_PROJECT_PATH}"
           ssh -o StrictHostKeyChecking=yes \
-            "${EC2_USER_VAL}@${EC2_HOST_VAL}" "if [ -d ${REMOTE_PROJECT_PATH} ]; then rm -rf ${REMOTE_PROJECT_PATH}; echo 'Cleanup successful.'; else echo 'Remote directory not found, skipping cleanup.'; fi"
+            "${EC2_USER_VAL}@${EC2_HOST_VAL}" "if [ -d \"${REMOTE_PROJECT_PATH}\" ]; then rm -rf \"${REMOTE_PROJECT_PATH}\"; echo 'Cleanup successful.'; else echo 'Remote directory not found, skipping cleanup.'; fi" # Added quotes
           echo "Cleanup process finished."
+
