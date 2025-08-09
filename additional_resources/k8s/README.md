@@ -110,7 +110,7 @@ The `admin.conf` file should typically be placed at `~/.kube/config` on the mach
 - **Set the `KUBECONFIG` Environment Variable (if not using the default path):**
     If you've placed the configuration file at a location other than `~/.kube/config`, or if you manage multiple cluster configurations, you'll need to tell `kubectl` where to find it.
 
-- **Run the following command to test and paste the outputs in the next section:** `kubectl get nodes -o wide`, `kubectl get pods -A` & `kubectl top pods -A`
+- **Run the following commands to test and paste the outputs in the next section:** `kubectl get nodes -o wide`, `kubectl get pods -A` & `kubectl top pods -A`
 
 ## Expected Terminal Outputs
 

@@ -46,7 +46,6 @@ variable "tools_ec2_ip" {
 
 #################### EC2 variables ################
 variable "ami_id" {
-  description = "The ID of the AMI to use for the EC2 instances."
   type        = string
 }
 
