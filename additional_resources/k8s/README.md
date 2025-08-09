@@ -112,6 +112,31 @@ The `admin.conf` file should typically be placed at `~/.kube/config` on the mach
 
 - **Run the following commands to test and paste the outputs in the next section:** `kubectl get nodes -o wide`, `kubectl get pods -A` & `kubectl top pods -A`
 
-## Expected Terminal Outputs
+## Terminal Outputs
 
-*(This section is a placeholder. You need to capture the actual output from your cluster after successful deployment and paste it here within code blocks.)*
+```
+ubuntu@ip-172-18-3-234:~$ kubectl get nodes -o wide
+NAME              STATUS   ROLES           AGE   VERSION   INTERNAL-IP    EXTERNAL-IP   OS-IMAGE             KERNEL-VERSION   CONTAINER-RUNTIME
+ip-172-18-3-234   Ready    control-plane   15h   v1.29.1   172.18.3.234   <none>        Ubuntu 22.04.5 LTS   6.8.0-1027-aws   containerd://1.7.27
+ip-172-18-4-193   Ready    <none>          15h   v1.29.1   172.18.4.193   <none>        Ubuntu 22.04.5 LTS   6.8.0-1027-aws   containerd://1.7.27
+ubuntu@ip-172-18-3-234:~$ kubectl get pods -A
+NAMESPACE     NAME                                       READY   STATUS    RESTARTS   AGE
+kube-system   calico-kube-controllers-5fc7d6cf67-8g9zf   1/1     Running   0          15h
+kube-system   calico-node-8nlw6                          1/1     Running   0          15h
+kube-system   calico-node-v9qbn                          1/1     Running   0          15h
+kube-system   coredns-76f75df574-sms8m                   1/1     Running   0          15h
+kube-system   coredns-76f75df574-vghkk                   1/1     Running   0          15h
+kube-system   etcd-ip-172-18-3-234                       1/1     Running   0          15h
+kube-system   kube-apiserver-ip-172-18-3-234             1/1     Running   0          15h
+kube-system   kube-controller-manager-ip-172-18-3-234    1/1     Running   0          15h
+kube-system   kube-proxy-tb67l                           1/1     Running   0          15h
+kube-system   kube-proxy-whm6z                           1/1     Running   0          15h
+kube-system   kube-scheduler-ip-172-18-3-234             1/1     Running   0          15h
+kube-system   metrics-server-59d465df9f-4wz5l            1/1     Running   0          11h
+ubuntu@ip-172-18-3-234:~$ kubectl top pods -A
+NAMESPACE     NAME                              CPU(cores)   MEMORY(bytes)
+kube-system   calico-node-v9qbn                 30m          114Mi
+kube-system   kube-proxy-tb67l                  1m           11Mi
+kube-system   metrics-server-59d465df9f-4wz5l   3m           17Mi
+
+```
