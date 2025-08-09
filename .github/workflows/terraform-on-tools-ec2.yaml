@@ -32,12 +32,12 @@ jobs:
           echo "branch_name_out=$BRANCH_NAME" >> $GITHUB_OUTPUT
         shell: bash
 
-      - name: 'Set up SSH Key'
+      - name: 'Set up SSH Key for GitHub Runner to EC2'
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.ID_RSA }}
 
-      - name: 'Create known_hosts'
+      - name: 'Create known_hosts for EC2'
         run: |
           mkdir -p ~/.ssh
           touch ~/.ssh/known_hosts
@@ -49,7 +49,7 @@ jobs:
         run: |
           EC2_USER_VAL="${{ secrets.EC2_USER }}"
           EC2_HOST_VAL="${{ secrets.EC2_HOST }}"
-          CURRENT_BRANCH="${{ steps.get_branch.outputs.branch_name_out }}" # Use determined branch
+          CURRENT_BRANCH="${{ steps.get_branch.outputs.branch_name_out }}"
 
           if [ -z "$CURRENT_BRANCH" ]; then
             echo "::error::Could not determine branch name."
@@ -73,7 +73,7 @@ jobs:
           echo "Job Name will use branch: $CURRENT_BRANCH"
           echo "Remote project path will be: ${REMOTE_PROJECT_PATH}"
           echo "remote_project_path_out=${REMOTE_PROJECT_PATH}" >> $GITHUB_OUTPUT
-          echo "branch_name_slug_out=${BRANCH_NAME_SLUG}" >> $GITHUB_OUTPUT # Pass determined slug
+          echo "branch_name_slug_out=${BRANCH_NAME_SLUG}" >> $GITHUB_OUTPUT
           echo "run_id_out=${RUN_ID}" >> $GITHUB_OUTPUT
 
           ssh -o StrictHostKeyChecking=yes \
@@ -82,46 +82,75 @@ jobs:
           rsync -avz -e "ssh -o StrictHostKeyChecking=yes" \
             ./ "${EC2_USER_VAL}@${EC2_HOST_VAL}:${REMOTE_PROJECT_PATH}/"
 
-      - name: 'Run Terraform Init, Validate, Plan on tools_ec2'
+      - name: 'Run Terraform Plan'
         id: plan
+        env:
+          VAULT_PASSWORD: ${{ secrets.VAULT_PASS }}
         run: |
           EC2_USER_VAL="${{ secrets.EC2_USER }}"
           EC2_HOST_VAL="${{ secrets.EC2_HOST }}"
-          # Use the branch slug from the sync step's output
           BRANCH_NAME_SLUG_FROM_SYNC="${{ steps.sync.outputs.branch_name_slug_out }}"
 
           if [ -z "$BRANCH_NAME_SLUG_FROM_SYNC" ] || [ -z "$EC2_USER_VAL" ] || [ -z "$EC2_HOST_VAL" ]; then
-            echo "::error::Critical variables (branch slug, EC2 user, or EC2 host) are missing in plan step."
+            echo "::error::Critical variables (branch slug, EC2 user, or EC2 host) are missing."
+            exit 1
+          fi
+          if [ -z "$VAULT_PASSWORD" ]; then
+            echo "::error::VAULT_PASS secret is not set or empty."
             exit 1
           fi
 
           REPO_NAME=$(echo "${{ github.repository }}" | cut -d'/' -f2)
           RUN_ID="${{ github.run_id }}"
-          # Use the slug passed from the sync step
           REMOTE_PROJECT_PATH="/home/${EC2_USER_VAL}/terraform_runs/${REPO_NAME}/${BRANCH_NAME_SLUG_FROM_SYNC}/${RUN_ID}"
           TERRAFORM_DIR_IN_REPO="."
 
+          ENCRYPTED_FILE_RELATIVE_PATH="modules/ec2/files/id_rsa.pub"
+          DECRYPTED_FILE_RELATIVE_PATH="modules/ec2/files/id_rsa.pub"
+
+          ENCRYPTED_FILE_ON_EC2="${REMOTE_PROJECT_PATH}/${TERRAFORM_DIR_IN_REPO}/${ENCRYPTED_FILE_RELATIVE_PATH}"
+          DECRYPTED_FILE_ON_EC2="${REMOTE_PROJECT_PATH}/${TERRAFORM_DIR_IN_REPO}/${DECRYPTED_FILE_RELATIVE_PATH}"
+          DECRYPTED_FILE_DIR_ON_EC2=$(dirname "${DECRYPTED_FILE_ON_EC2}")
+
           SSH_COMMANDS="
           set -e
-          cd ${REMOTE_PROJECT_PATH}/${TERRAFORM_DIR_IN_REPO} && \
-          echo 'Running Terraform Init...' && \
-          terraform init -input=false -no-color && \
-          echo 'Running Terraform Validate...' && \
-          terraform validate -no-color && \
-          echo 'Running Terraform Plan...' && \
+          cd ${REMOTE_PROJECT_PATH}/${TERRAFORM_DIR_IN_REPO}
+
+          echo 'Creating directory for decrypted file if it does not exist: ${DECRYPTED_FILE_DIR_ON_EC2}'
+          mkdir -p ${DECRYPTED_FILE_DIR_ON_EC2}
+
+          echo 'Decrypting file: ${ENCRYPTED_FILE_ON_EC2} to ${DECRYPTED_FILE_ON_EC2}'
+          echo '\$VAULT_PASSWORD' | ansible-vault decrypt '${ENCRYPTED_FILE_ON_EC2}' --output '${DECRYPTED_FILE_ON_EC2}'
+          
+          echo 'Decryption complete. Verifying decrypted file exists...'
+          if [ ! -f '${DECRYPTED_FILE_ON_EC2}' ]; then
+            echo '::error::Decrypted file ${DECRYPTED_FILE_ON_EC2} not found after decryption attempt!'
+            exit 1
+          fi
+          echo 'Decrypted file found.'
+
+          echo 'Running Terraform Init...'
+          terraform init -input=false -no-color
+
+          echo 'Running Terraform Validate...'
+          terraform validate -no-color
+
+          echo 'Running Terraform Plan...'
           terraform plan -input=false -var-file=config.tfvars -no-color -out=tfplan
           "
-          echo "Attempting to run Terraform plan commands on tools_ec2..."
+
+          echo "Attempting to run Ansible Vault decryption and Terraform plan commands on tools_ec2..."
           ssh -o StrictHostKeyChecking=yes \
-            "${EC2_USER_VAL}@${EC2_HOST_VAL}" "${SSH_COMMANDS}" > plan_output.txt
+            "${EC2_USER_VAL}@${EC2_HOST_VAL}" "export VAULT_PASSWORD='${VAULT_PASSWORD}'; ${SSH_COMMANDS}" > plan_output.txt
 
           echo "--- Terraform Plan Output from EC2 ---"
           cat plan_output.txt
           echo "--- End of Terraform Plan Output ---"
 
           PLAN_SUMMARY=$(cat plan_output.txt)
+          CLEANED_PLAN_SUMMARY=$(echo "${PLAN_SUMMARY}" | sed "s/${VAULT_PASSWORD}/**********/g") # Basic cleaning
           echo "plan_summary_env<<EOF" >> $GITHUB_ENV
-          echo "${PLAN_SUMMARY}" >> $GITHUB_ENV
+          echo "${CLEANED_PLAN_SUMMARY}" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
           if ssh -o StrictHostKeyChecking=yes "${EC2_USER_VAL}@${EC2_HOST_VAL}" "[ -f ${REMOTE_PROJECT_PATH}/${TERRAFORM_DIR_IN_REPO}/tfplan ]"; then
@@ -139,38 +168,63 @@ jobs:
 
       - name: 'Run Terraform Apply on tools_ec2'
         if: github.event.inputs.action_type == 'apply' && steps.plan.outcome == 'success' && steps.plan.outputs.tfplan_exists == 'true'
+        env:
+          VAULT_PASSWORD: ${{ secrets.VAULT_PASS }}
         run: |
           EC2_USER_VAL="${{ secrets.EC2_USER }}"
           EC2_HOST_VAL="${{ secrets.EC2_HOST }}"
-          # Use the branch slug from the sync step's output
           BRANCH_NAME_SLUG_FROM_SYNC="${{ steps.sync.outputs.branch_name_slug_out }}"
 
           if [ -z "$BRANCH_NAME_SLUG_FROM_SYNC" ] || [ -z "$EC2_USER_VAL" ] || [ -z "$EC2_HOST_VAL" ]; then
-            echo "::error::Critical variables (branch slug, EC2 user, or EC2 host) are missing in apply step."
+            echo "::error::Critical variables are missing in apply step."
+            exit 1
+          fi
+           if [ -z "$VAULT_PASSWORD" ]; then
+            echo "::error::VAULT_PASS secret is not set or empty for apply step."
             exit 1
           fi
 
-          echo "User selected 'apply'. Proceeding to Terraform Apply for branch: (determined as default)"
+          echo "User selected 'apply'. Proceeding to Terraform Apply."
           REPO_NAME=$(echo "${{ github.repository }}" | cut -d'/' -f2)
           RUN_ID="${{ github.run_id }}"
           REMOTE_PROJECT_PATH="/home/${EC2_USER_VAL}/terraform_runs/${REPO_NAME}/${BRANCH_NAME_SLUG_FROM_SYNC}/${RUN_ID}"
           TERRAFORM_DIR_IN_REPO="."
+          
+          ENCRYPTED_FILE_RELATIVE_PATH="modules/ec2/files/id_rsa.pub"
+          DECRYPTED_FILE_RELATIVE_PATH="modules/ec2/files/id_rsa.pub"
+          
+          ENCRYPTED_FILE_ON_EC2="${REMOTE_PROJECT_PATH}/${TERRAFORM_DIR_IN_REPO}/${ENCRYPTED_FILE_RELATIVE_PATH}"
+          DECRYPTED_FILE_ON_EC2="${REMOTE_PROJECT_PATH}/${TERRAFORM_DIR_IN_REPO}/${DECRYPTED_FILE_RELATIVE_PATH}"
+          DECRYPTED_FILE_DIR_ON_EC2=$(dirname "${DECRYPTED_FILE_ON_EC2}")
 
-          echo "Attempting to apply Terraform configuration on tools_ec2 using the generated tfplan..."
+          SSH_APPLY_COMMANDS="
+          set -e
+          cd ${REMOTE_PROJECT_PATH}/${TERRAFORM_DIR_IN_REPO}
+
+          echo 'Ensuring directory for decrypted file exists for apply: ${DECRYPTED_FILE_DIR_ON_EC2}'
+          mkdir -p ${DECRYPTED_FILE_DIR_ON_EC2}
+
+          echo 'Re-decrypting file for apply consistency (if needed): ${ENCRYPTED_FILE_ON_EC2}'
+          echo '\$VAULT_PASSWORD' | ansible-vault decrypt '${ENCRYPTED_FILE_ON_EC2}' --output '${DECRYPTED_FILE_ON_EC2}'
+          
+          echo 'Applying Terraform configuration using the generated tfplan...'
+          terraform apply -input=false -auto-approve tfplan 
+          "
+
+          echo "Attempting to apply Terraform configuration on tools_ec2..."
           ssh -o StrictHostKeyChecking=yes \
-            "${EC2_USER_VAL}@${EC2_HOST_VAL}" "cd ${REMOTE_PROJECT_PATH}/${TERRAFORM_DIR_IN_REPO} && terraform apply -var-file=config.tfvars -input=false -auto-approve tfplan"
+            "${EC2_USER_VAL}@${EC2_HOST_VAL}" "export VAULT_PASSWORD='${VAULT_PASSWORD}'; ${SSH_APPLY_COMMANDS}"
           echo "Terraform Apply command sent."
 
-      - name: 'Clean up synced code on tools_ec2'
+      - name: 'Clean up synced code and decrypted files on tools_ec2'
         if: always()
         run: |
           EC2_USER_VAL="${{ secrets.EC2_USER }}"
           EC2_HOST_VAL="${{ secrets.EC2_HOST }}"
-          # Use the branch slug from the sync step's output if available, otherwise cleanup might be broader or fail
           BRANCH_NAME_SLUG_FROM_SYNC="${{ steps.sync.outputs.branch_name_slug_out }}"
 
           if [ -z "$BRANCH_NAME_SLUG_FROM_SYNC" ] || [ -z "$EC2_USER_VAL" ] || [ -z "$EC2_HOST_VAL" ]; then
-            echo "::warning::Skipping cleanup as critical variables (branch slug, EC2 user, or EC2 host) are missing."
+            echo "::warning::Skipping cleanup as critical variables are missing."
             exit 0
           fi
 
