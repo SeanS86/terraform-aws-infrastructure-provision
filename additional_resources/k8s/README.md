@@ -23,16 +23,6 @@ This document outlines the steps taken to manually deploy a Kubernetes cluster (
     *   [Verification Commands](#verification-commands)
     *   [Install Metrics Server](#install-metrics-server)
     *   [Verify Metrics Server](#verify-metrics-server)
-8.  [Phase 5: Accessing the Kubernetes Dashboard](#phase-5-accessing-the-kubernetes-dashboard)
-    *   [Deploy Dashboard](#deploy-dashboard)
-    *   [Create Admin Service Account](#create-admin-service-account)
-    *   [Get Bearer Token](#get-bearer-token)
-    *   [Access via `kubectl proxy`](#access-via-kubectl-proxy)
-9.  [Expected Terminal Outputs](#expected-terminal-outputs)
-    *   [`kubectl get nodes -o wide`](#kubectl-get-nodes--o-wide)
-    *   [`kubectl get pods -A`](#kubectl-get-pods--a)
-    *   [`kubectl top nodes`](#kubectl-top-nodes)
-    *   [`kubectl top pods -A`](#kubectl-top-pods--a)
 
 ## Prerequisites
 
@@ -122,25 +112,6 @@ The `admin.conf` file should typically be placed at `~/.kube/config` on the mach
     `kubectl get nodes -o wide`,
     `kubectl get pods -A`,
     `kubectl get top pods -A`
-
-## Phase 5: Accessing the Kubernetes Dashboard
-
-The Kubernetes Dashboard provides a web-based UI for managing the cluster.
-
-### Deploy Dashboard
-### Create Admin Service Account
-For administrative access to the dashboard (for testing/development purposes only; use fine-grained RBAC for production).
-
-Create `dashboard-adminuser.yaml`:
-
-Copy the output token. This will be used to log in to the Dashboard.
-
-### Access via `kubectl proxy`
-This method makes the dashboard accessible on `localhost` via the `kubectl` utility.
-1.  Run `kubectl proxy` in a terminal:
-2.  Open a web browser and navigate to:
-    `http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/`
-3.  When prompted, select "Token" and paste the bearer token obtained earlier.
 
 ## Expected Terminal Outputs
 
