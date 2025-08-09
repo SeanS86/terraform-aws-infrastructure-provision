@@ -112,7 +112,7 @@ The `admin.conf` file should typically be placed at `~/.kube/config` on the mach
 
 - **Run the following commands to test and paste the outputs in the next section:** `kubectl get nodes -o wide`, `kubectl get pods -A` & `kubectl top pods -A`
 
-- **After deployments tasks and some troubleshooting:**
+## After deployments tasks and some troubleshooting
 
 Metrics Server was installed to provide resource usage metrics.
 
