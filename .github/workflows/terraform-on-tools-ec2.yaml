@@ -1,13 +1,8 @@
-name: 'Terraform CI/CD via SSH (Manual Trigger: Plan or Apply)'
+name: 'Terraform CI/CD via SSH to tools_ec2'
 
 on:
   workflow_dispatch:
     inputs:
-      branch:
-        description: 'Branch to checkout and run Terraform against'
-        required: true
-        default: 'main'
-        type: string
       action_type:
         description: 'Action to perform (plan or apply)'
         required: true
