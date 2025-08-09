@@ -88,10 +88,10 @@ This script (`join-worker-node.sh`) is run **only** on the designated worker nod
 
 ## Phase 4: Verify Cluster
 
-Perform these steps from the **control-plane node** or any machine configured with `kubectl` access to the new cluster (e.g., the Jump Box).
+Perform these steps from the **control-plane node** or any machine configured with `kubectl` access to the new cluster (jump_box).
 
 ### Configuring `kubectl` Access
-To use `kubectl` from a machine other than the control-plane node (e.g., the Jump Box):
+To use `kubectl` from a machine other than the control-plane node (jump_box):
 1.  Copy the kubeconfig file from the control-plane node:
 To manage your Kubernetes cluster from a remote machine using `kubectl`, you need the `kubeconfig` file. This file contains the cluster connection information and credentials.
 
@@ -111,6 +111,28 @@ The `admin.conf` file should typically be placed at `~/.kube/config` on the mach
     If you've placed the configuration file at a location other than `~/.kube/config`, or if you manage multiple cluster configurations, you'll need to tell `kubectl` where to find it.
 
 - **Run the following commands to test and paste the outputs in the next section:** `kubectl get nodes -o wide`, `kubectl get pods -A` & `kubectl top pods -A`
+
+- **After deployments tasks and some troubleshooting:**
+
+Metrics Server was installed to provide resource usage metrics.
+
+**1. Apply the Metrics Server Manifest:**
+Deployed from the control-plane node (or any machine with `kubectl` access):
+
+**2. Modify Metrics Server Deployment for `kubeadm` (if necessary):**
+For `kubeadm` clusters, it's sometimes necessary to allow the Metrics Server to communicate with kubelets insecurely, especially if kubelet certificates are self-signed or internal hostnames are not robustly resolvable.
+
+Add the `--kubelet-insecure-tls` argument to the container's `args`:
+
+**Problem Identified:**
+Initial attempts to use `kubectl top pods` resulted in `error: Metrics API not available`. Further investigation of `calico-node` pods revealed they were not `READY` due to BGP peering failures. The `describe pod` output for `calico-node` showed:
+
+This indicated that the AWS Security Group associated with the K8s nodes was blocking the necessary Calico traffic.
+
+**Solution: Updating AWS Security Group Ingress Rules**
+
+1.  **Allow BGP (TCP Port 179):** For Calico nodes to establish BGP sessions for route exchange.
+2.  **Allow IP-in-IP (IP Protocol 4):** Because Calico was configured with `CALICO_IPV4POOL_IPIP: Always` for pod traffic encapsulation.
 
 ## Terminal Outputs
 
