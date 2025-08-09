@@ -20,7 +20,8 @@ This document outlines the steps taken to manually deploy a Kubernetes cluster (
     *   [Execution](#execution-worker)
 7.  [Phase 4: Verify Cluster](#phase-4-verify-cluster)
     *   [Configuring `kubectl` Access](#configuring-kubectl-access)
-    *   [Verification Commands](#verification-commands)
+    *   [After deployment tasks and some troubleshooting](#after-deployment-tasks-and-some-troubleshooting)
+    *   [Terminal Outputs](#terminal-outputs)
 
 ## Prerequisites
 
@@ -112,7 +113,7 @@ The `admin.conf` file should typically be placed at `~/.kube/config` on the mach
 
 - **Run the following commands to test and paste the outputs in the next section:** `kubectl get nodes -o wide`, `kubectl get pods -A` & `kubectl top pods -A`
 
-## After deployments tasks and some troubleshooting
+### After deployment tasks and some troubleshooting
 
 Metrics Server was installed to provide resource usage metrics.
 
@@ -134,7 +135,7 @@ This indicated that the AWS Security Group associated with the K8s nodes was blo
 1.  **Allow BGP (TCP Port 179):** For Calico nodes to establish BGP sessions for route exchange.
 2.  **Allow IP-in-IP (IP Protocol 4):** Because Calico was configured with `CALICO_IPV4POOL_IPIP: Always` for pod traffic encapsulation.
 
-## Terminal Outputs
+### Terminal Outputs
 
 ```
 ubuntu@ip-172-18-3-234:~$ kubectl get nodes -o wide
