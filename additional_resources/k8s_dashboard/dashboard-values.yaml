@@ -1,0 +1,55 @@
+# dashboard-values.yaml
+
+# Deploy the recommended kubernetes-dashboard.
+# ref: https://github.com/kubernetes/dashboard/blob/master/aio/deploy/recommended.yaml
+# Enable this if you want the default roles and bindings created by the chart.
+# For more control, you might manage these separately.
+enableSkipLogin: false # Set to true to allow skipping login - less secure, good for quick testing ONLY.
+# enableClusterAuthorization: true # If you want the dashboard to have broad cluster read access (use with caution)
+
+service:
+  type: NodePort # This is key for your requirement
+  # nodePort: 30000 # Optional: specify a static NodePort (within 30000-32767 range). If omitted, Helm picks one.
+  # If you specify a nodePort, ensure it's not already in use on your nodes.
+  externalPort: 443 # The port the service listens on internally (before NodePort mapping)
+  # For NLB, you'll likely point the NLB to the NodePort, not this externalPort directly.
+
+# If you want to use the NGINX Ingress controller, you can enable it here.
+# Since you're planning to use an NLB with NodePort directly, we'll keep this disabled for now.
+ingress:
+  enabled: false
+
+# RBAC settings
+# The chart creates a service account for the dashboard.
+# You will need to create a ClusterRoleBinding to grant this service account permissions.
+# The chart CAN create some default roles if `enableClusterAuthorization` is true, but it's often
+# better to manage this explicitly for security.
+rbac:
+  create: true
+  clusterRoleMetrics: true # Creates a role for metrics access if metrics-server is installed
+  # clusterReadOnlyRole: true # If you want to create a read-only role that you can bind users to.
+
+# Consider resource requests and limits for production
+# resources:
+#   limits:
+#     cpu: 200m
+#     memory: 200Mi
+#   requests:
+#     cpu: 100m
+#     memory: 100Mi
+
+# Extra arguments for the dashboard deployment
+# For example, to set the auto-generate-certificates flag (if not using your own certs)
+# extraArgs:
+#   - --auto-generate-certificates
+#   - --namespace=kubernetes-dashboard # Ensure this matches where you deploy
+
+# If you have your own certificates, you can specify them
+# protocolHttp: false # Set to true if dashboard is accessed via HTTP (e.g. Ingress terminates SSL)
+# certs:
+#   keyFile: "" # Path to your key file within the container or a secret
+#   certFile: "" # Path to your cert file
+
+# We will create a separate ServiceAccount and ClusterRoleBinding for admin access later.
+# For now, the dashboard will deploy, but you won't be able to log in with full admin rights
+# until you set up the access token.

@@ -1,0 +1,246 @@
+name: Deploy Kubernetes Dashboard
+
+on:
+  workflow_dispatch: # Allows manual triggering
+  # push:
+  #   branches:
+  #     - main # Or your deployment branch
+
+env:
+  TOOLS_EC2_HOST: <your_tools_ec2_public_ip_or_dns>
+  TOOLS_EC2_USER: <user_for_tools_ec2_ssh> # e.g., ec2-user, ubuntu
+  JUMP_BOX_HOST: <your_jump_box_private_ip_or_dns_from_tools_ec2_perspective>
+  JUMP_BOX_USER: <user_for_jump_box_ssh> # e.g., ec2-user, ubuntu
+  K8S_NAMESPACE: kubernetes-dashboard
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code (if needed for scripts or values files)
+        uses: actions/checkout@v3
+
+      - name: Setup SSH Agent for Multi-Hop
+        env:
+          # Only one private key needed now
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY_BASTION }} # Assuming you name the secret this
+        run: |
+          mkdir -p ~/.ssh
+          echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa # Use the standard name id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+          eval "$(ssh-agent -s)"
+          ssh-add ~/.ssh/id_rsa # Add the key to the agent
+          echo "SSH_AUTH_SOCK=${SSH_AUTH_SOCK}" >> $GITHUB_ENV
+          echo "SSH_AGENT_PID=${SSH_AGENT_PID}" >> $GITHUB_ENV
+          echo "Successfully added SSH key to agent."
+
+      - name: Execute Deployment Script on Jump Box
+        env:
+          # These are set by the previous step and picked up automatically by ssh
+          SSH_AUTH_SOCK: ${{ env.SSH_AUTH_SOCK }}
+          SSH_AGENT_PID: ${{ env.SSH_AGENT_PID }}
+        run: |
+          cat << 'EOF_SCRIPT' > deploy_on_jumpbox.sh
+          #!/bin/bash
+          set -e # Exit immediately if a command exits with a non-zero status.
+
+          echo "--- Running on Jump Box: $(hostname) ---"
+
+          # 2. Check/Install kubectl
+          if ! command -v kubectl &> /dev/null
+          then
+              echo "kubectl not found. Installing kubectl..."
+              # Ensure your jump_box OS has sudo configured for $JUMP_BOX_USER for these commands
+              # Or run the whole script as root (less ideal)
+              if command -v apt-get &> /dev/null; then # Debian/Ubuntu
+                  sudo apt-get update -y
+                  sudo apt-get install -y apt-transport-https ca-certificates curl
+                  K8S_LATEST=$(curl -L -s https://dl.k8s.io/release/stable.txt)
+                  curl -LO "https://dl.k8s.io/release/${K8S_LATEST}/bin/linux/amd64/kubectl"
+                  sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+                  rm kubectl
+              elif command -v yum &> /dev/null; then # Amazon Linux 2 / CentOS / RHEL
+                  sudo yum update -y
+                  cat <<EOF_REPO | sudo tee /etc/yum.repos.d/kubernetes.repo
+          [kubernetes]
+          name=Kubernetes
+          baseurl=https://pkgs.k8s.io/core:/stable:/v1.28/rpm/ # Check for latest K8s version repo
+          enabled=1
+          gpgcheck=1
+          gpgkey=https://pkgs.k8s.io/core:/stable:/v1.28/rpm/repodata/repomd.xml.key
+          EOF_REPO
+                  sudo yum install -y kubectl
+              else
+                  echo "Unsupported package manager for kubectl installation on jump_box."
+                  exit 1
+              fi
+              echo "kubectl installed successfully."
+              kubectl version --client
+          else
+              echo "kubectl is already installed."
+              kubectl version --client
+          fi
+
+          # 3. Check/Install Helm
+          if ! command -v helm &> /dev/null
+          then
+              echo "Helm not found. Installing Helm..."
+              curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+              chmod 700 get_helm.sh
+              ./get_helm.sh # This might need sudo if installing to /usr/local/bin by default
+              # Consider installing to a user directory and adding to PATH if sudo is an issue
+              # e.g. export PATH="$HOME/bin:$PATH" after ./get_helm.sh --no-sudo (if supported) or manually moving helm binary
+              rm get_helm.sh
+              echo "Helm installed successfully."
+              helm version
+          else
+              echo "Helm is already installed."
+              helm version
+          fi
+
+          # 4. Deploy Kubernetes Dashboard using Helm
+
+          echo "--- Adding Kubernetes Dashboard Helm Repo ---"
+          helm repo add kubernetes-dashboard https://kubernetes.github.io/dashboard/ --force-update
+          helm repo update
+
+          echo "--- Creating dashboard-values.yaml on jump_box ---"
+          # This should ideally be checked into your repo and copied from tools_ec2 to jump_box
+          # For now, creating it dynamically.
+          # Ensure this path is writable by JUMP_BOX_USER or use /tmp/
+          cat << EOF_VALUES > ./dashboard-values.yaml
+          # Pulled from current file context
+          # dashboard-values.yaml
+
+          # Deploy the recommended kubernetes-dashboard.
+          # ref: https://github.com/kubernetes/dashboard/blob/master/aio/deploy/recommended.yaml
+          # Enable this if you want the default roles and bindings created by the chart.
+          # For more control, you might manage these separately.
+          enableSkipLogin: false # Set to true to allow skipping login - less secure, good for quick testing ONLY.
+          # enableClusterAuthorization: true # If you want the dashboard to have broad cluster read access (use with caution)
+
+          service:
+            type: NodePort # This is key for your requirement
+            # nodePort: 30000 # Optional: specify a static NodePort (within 30000-32767 range). If omitted, Helm picks one.
+            # If you specify a nodePort, ensure it's not already in use on your nodes.
+            externalPort: 443 # The port the service listens on internally (before NodePort mapping)
+            # For NLB, you'll likely point the NLB to the NodePort, not this externalPort directly.
+
+          # If you want to use the NGINX Ingress controller, you can enable it here.
+          # Since you're planning to use an NLB with NodePort directly, we'll keep this disabled for now.
+          ingress:
+            enabled: false
+
+          # RBAC settings
+          # The chart creates a service account for the dashboard.
+          # You will need to create a ClusterRoleBinding to grant this service account permissions.
+          # The chart CAN create some default roles if `enableClusterAuthorization` is true, but it's often
+          # better to manage this explicitly for security.
+          rbac:
+            create: true
+            clusterRoleMetrics: true # Creates a role for metrics access if metrics-server is installed
+            # clusterReadOnlyRole: true # If you want to create a read-only role that you can bind users to.
+
+          # Consider resource requests and limits for production
+          # resources:
+          #   limits:
+          #     cpu: 200m
+          #     memory: 200Mi
+          #   requests:
+          #     cpu: 100m
+          #     memory: 100Mi
+
+          # Extra arguments for the dashboard deployment
+          # For example, to set the auto-generate-certificates flag (if not using your own certs)
+          # extraArgs:
+          #   - --auto-generate-certificates
+          #   - --namespace=kubernetes-dashboard # Ensure this matches where you deploy
+
+          # If you have your own certificates, you can specify them
+          # protocolHttp: false # Set to true if dashboard is accessed via HTTP (e.g. Ingress terminates SSL)
+          # certs:
+          #   keyFile: "" # Path to your key file within the container or a secret
+          #   certFile: "" # Path to your cert file
+
+          # We will create a separate ServiceAccount and ClusterRoleBinding for admin access later.
+          # For now, the dashboard will deploy, but you won't be able to log in with full admin rights
+          # until you set up the access token.
+          EOF_VALUES
+
+          echo "--- Installing/Upgrading Kubernetes Dashboard ---"
+          # Ensure the namespace exists
+          kubectl create namespace ${{ env.K8S_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+
+          helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard \
+            --namespace ${{ env.K8S_NAMESPACE }} \
+            -f ./dashboard-values.yaml \
+            --atomic \
+            --timeout 10m0s \
+            --wait # Wait for resources to be ready
+
+          echo "--- Verifying Deployment ---"
+          kubectl get pods -n ${{ env.K8S_NAMESPACE }}
+          kubectl get svc kubernetes-dashboard -n ${{ env.K8S_NAMESPACE }} # Check service details
+
+          echo "--- Creating admin-user ServiceAccount and ClusterRoleBinding ---"
+          # This assumes the Helm chart doesn't create a suitable admin user by default
+          # Or if you want to ensure your specific admin setup.
+          cat << EOF_ADMIN > ./dashboard-admin.yaml
+          apiVersion: v1
+          kind: ServiceAccount
+          metadata:
+            name: admin-user
+            namespace: ${{ env.K8S_NAMESPACE }}
+          ---
+          apiVersion: rbac.authorization.k8s.io/v1
+          kind: ClusterRoleBinding
+          metadata:
+            name: admin-user-${{ env.K8S_NAMESPACE }} # Make name unique
+          roleRef:
+            apiGroup: rbac.authorization.k8s.io
+            kind: ClusterRole
+            name: cluster-admin
+          subjects:
+          - kind: ServiceAccount
+            name: admin-user
+            namespace: ${{ env.K8S_NAMESPACE }}
+          EOF_ADMIN
+          kubectl apply -f ./dashboard-admin.yaml
+
+          echo "--- Kubernetes Dashboard Deployment Steps Completed on Jump Box ---"
+          echo "To get the admin token (run this manually on the jump box or adapt script):"
+          echo "kubectl create token admin-user -n ${{ env.K8S_NAMESPACE }} --duration=8760h"
+          # Or for older K8s:
+          # echo "kubectl -n ${{ env.K8S_NAMESPACE }} get secret \$(kubectl -n ${{ env.K8S_NAMESPACE }} get sa/admin-user -o jsonpath=\"{.secrets[0].name}\") -o go-template=\"{{.data.token | base64decode}}\""
+
+          EOF_SCRIPT
+
+          # Make the script executable on the runner before attempting to pipe it
+          chmod +x deploy_on_jumpbox.sh
+
+          echo "Connecting to tools_ec2 (${{ env.TOOLS_EC2_USER }}@${{ env.TOOLS_EC2_HOST }}) then to jump_box (${{ env.JUMP_BOX_USER }}@${{ env.JUMP_BOX_HOST }})..."
+
+          # Using ProxyCommand for a cleaner multi-hop execution.
+          # The agent forwarding is handled by the ssh client config and the agent running on the runner.
+          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+              -o ProxyCommand="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -W %h:%p -i ~/.ssh/id_rsa ${{ env.TOOLS_EC2_USER }}@${{ env.TOOLS_EC2_HOST }}" \
+              -i ~/.ssh/id_rsa \
+              ${{ env.JUMP_BOX_USER }}@${{ env.JUMP_BOX_HOST }} 'bash -s' < deploy_on_jumpbox.sh
+
+          # If the above ProxyCommand gives issues, revert to the nested SSH call,
+          # ensuring agent forwarding is explicitly requested for the second hop:
+          # ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+          #     -i ~/.ssh/id_rsa \
+          #     ${{ env.TOOLS_EC2_USER }}@${{ env.TOOLS_EC2_HOST }} \
+          #     "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ForwardAgent=yes ${{ env.JUMP_BOX_USER }}@${{ env.JUMP_BOX_HOST }} 'bash -s'" < deploy_on_jumpbox.sh
+
+      - name: Cleanup SSH Agent
+        if: always()
+        run: |
+          echo "Cleaning up SSH agent and key..."
+          if [ ! -z "${SSH_AGENT_PID}" ]; then
+            eval "$(ssh-agent -k)"
+          fi
+          rm -f ~/.ssh/id_rsa
+          echo "Cleanup complete."
