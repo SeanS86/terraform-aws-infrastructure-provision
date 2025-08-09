@@ -1,0 +1,4 @@
+name: Run Deployment
+
+on:
+  workflow_dispatch:

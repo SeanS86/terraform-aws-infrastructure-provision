@@ -1,0 +1,4 @@
+name: K8s Maintenance
+
+on:
+  workflow_dispatch:
