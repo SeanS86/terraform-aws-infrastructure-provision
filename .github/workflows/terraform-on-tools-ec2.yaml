@@ -172,18 +172,6 @@ jobs:
             echo "::error::Terraform plan file (tfplan) was not created on EC2."
           fi
 
-      - name: 'Display Plan Summary'
-        if: always()
-        env:
-          PLAN_SUMMARY_FROM_ENV: ${{ env.plan_summary_env }}
-        run: |
-          echo "Terraform Plan Summary (from EC2):"
-          if [ -n "$PLAN_SUMMARY_FROM_ENV" ]; then
-            echo "$PLAN_SUMMARY_FROM_ENV"
-          else
-            echo "Plan summary was not captured or is empty."
-          fi
-
       - name: 'Run Terraform Apply on tools_ec2'
         if: github.event.inputs.action_type == 'apply' && steps.plan.outcome == 'success' && steps.plan.outputs.tfplan_exists == 'true'
         env:
