@@ -1,4 +1,4 @@
-name: 'Terraform CI/CD via SSH to tools_ec2'
+name: 'Terraform CI/CD'
 
 on:
   workflow_dispatch:
@@ -13,18 +13,24 @@ on:
           - apply
 
 permissions:
-  contents: read # To checkout the specified branch
+  contents: read
 
 jobs:
   terraform-on-ec2:
-    name: 'Terraform ${{ github.event.inputs.action_type }} on tools_ec2 for branch ${{ github.event.inputs.branch }}'
+    name: 'Terraform ${{ github.event.inputs.action_type }} on tools_ec2'
     runs-on: ubuntu-latest
 
     steps:
-      - name: 'Checkout code for specified branch'
+      - name: 'Checkout code'
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.inputs.branch }}
+
+      - name: 'Determine Branch Name'
+        id: get_branch
+        run: |
+          BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+          echo "Operating on branch: $BRANCH_NAME"
+          echo "branch_name_out=$BRANCH_NAME" >> $GITHUB_OUTPUT
+        shell: bash
 
       - name: 'Set up SSH Key'
         uses: webfactory/ssh-agent@v0.9.0
@@ -39,38 +45,64 @@ jobs:
           chmod 644 ~/.ssh/known_hosts
 
       - name: 'Sync Terraform code to tools_ec2'
-        id: sync # Give an id to reference its outputs if needed later, though not strictly needed here
+        id: sync
         run: |
+          EC2_USER_VAL="${{ secrets.EC2_USER }}"
+          EC2_HOST_VAL="${{ secrets.EC2_HOST }}"
+          CURRENT_BRANCH="${{ steps.get_branch.outputs.branch_name_out }}" # Use determined branch
+
+          if [ -z "$CURRENT_BRANCH" ]; then
+            echo "::error::Could not determine branch name."
+            exit 1
+          fi
+          if [ -z "$EC2_USER_VAL" ]; then
+            echo "::error::EC2_USER secret is not set or empty."
+            exit 1
+          fi
+          if [ -z "$EC2_HOST_VAL" ]; then
+            echo "::error::EC2_HOST secret is not set or empty."
+            exit 1
+          fi
+
           REPO_NAME=$(echo "${{ github.repository }}" | cut -d'/' -f2)
           RUN_ID="${{ github.run_id }}"
-          BRANCH_NAME_SLUG=$(echo "${{ github.event.inputs.branch }}" | sed 's/[^a-zA-Z0-9]/-/g')
-          REMOTE_BASE_PATH="/home/${{ secrets.EC2_USER }}/terraform_runs"
+          BRANCH_NAME_SLUG=$(echo "$CURRENT_BRANCH" | sed 's/[^a-zA-Z0-9]/-/g')
+          REMOTE_BASE_PATH="/home/${EC2_USER_VAL}/terraform_runs"
           REMOTE_PROJECT_PATH="${REMOTE_BASE_PATH}/${REPO_NAME}/${BRANCH_NAME_SLUG}/${RUN_ID}"
 
+          echo "Job Name will use branch: $CURRENT_BRANCH"
           echo "Remote project path will be: ${REMOTE_PROJECT_PATH}"
-          # Output for potential use in other steps, though cleanup uses these vars directly
           echo "remote_project_path_out=${REMOTE_PROJECT_PATH}" >> $GITHUB_OUTPUT
-          echo "branch_name_slug_out=${BRANCH_NAME_SLUG}" >> $GITHUB_OUTPUT
+          echo "branch_name_slug_out=${BRANCH_NAME_SLUG}" >> $GITHUB_OUTPUT # Pass determined slug
           echo "run_id_out=${RUN_ID}" >> $GITHUB_OUTPUT
 
-
           ssh -o StrictHostKeyChecking=yes \
-            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "mkdir -p ${REMOTE_PROJECT_PATH}"
+            "${EC2_USER_VAL}@${EC2_HOST_VAL}" "mkdir -p ${REMOTE_PROJECT_PATH}"
 
           rsync -avz -e "ssh -o StrictHostKeyChecking=yes" \
-            ./ ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:${REMOTE_PROJECT_PATH}/
+            ./ "${EC2_USER_VAL}@${EC2_HOST_VAL}:${REMOTE_PROJECT_PATH}/"
 
       - name: 'Run Terraform Init, Validate, Plan on tools_ec2'
-        id: plan # Step ID for plan
+        id: plan
         run: |
+          EC2_USER_VAL="${{ secrets.EC2_USER }}"
+          EC2_HOST_VAL="${{ secrets.EC2_HOST }}"
+          # Use the branch slug from the sync step's output
+          BRANCH_NAME_SLUG_FROM_SYNC="${{ steps.sync.outputs.branch_name_slug_out }}"
+
+          if [ -z "$BRANCH_NAME_SLUG_FROM_SYNC" ] || [ -z "$EC2_USER_VAL" ] || [ -z "$EC2_HOST_VAL" ]; then
+            echo "::error::Critical variables (branch slug, EC2 user, or EC2 host) are missing in plan step."
+            exit 1
+          fi
+
           REPO_NAME=$(echo "${{ github.repository }}" | cut -d'/' -f2)
-          RUN_ID="${{ github.run_id }}" # Using directly, but could use steps.sync.outputs.run_id_out
-          BRANCH_NAME_SLUG=$(echo "${{ github.event.inputs.branch }}" | sed 's/[^a-zA-Z0-9]/-/g') # Using directly
-          REMOTE_PROJECT_PATH="/home/${{ secrets.EC2_USER }}/terraform_runs/${REPO_NAME}/${BRANCH_NAME_SLUG}/${RUN_ID}"
+          RUN_ID="${{ github.run_id }}"
+          # Use the slug passed from the sync step
+          REMOTE_PROJECT_PATH="/home/${EC2_USER_VAL}/terraform_runs/${REPO_NAME}/${BRANCH_NAME_SLUG_FROM_SYNC}/${RUN_ID}"
           TERRAFORM_DIR_IN_REPO="."
 
           SSH_COMMANDS="
-          set -e # Exit on error
+          set -e
           cd ${REMOTE_PROJECT_PATH}/${TERRAFORM_DIR_IN_REPO} && \
           echo 'Running Terraform Init...' && \
           terraform init -input=false -no-color && \
@@ -81,64 +113,72 @@ jobs:
           "
           echo "Attempting to run Terraform plan commands on tools_ec2..."
           ssh -o StrictHostKeyChecking=yes \
-            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "${SSH_COMMANDS}" > plan_output.txt
+            "${EC2_USER_VAL}@${EC2_HOST_VAL}" "${SSH_COMMANDS}" > plan_output.txt
 
           echo "--- Terraform Plan Output from EC2 ---"
           cat plan_output.txt
           echo "--- End of Terraform Plan Output ---"
 
-          # Store the full plan output in an environment variable for potential display
-          # For very large plans, this might hit limits. Consider artifacts for full plan.
           PLAN_SUMMARY=$(cat plan_output.txt)
           echo "plan_summary_env<<EOF" >> $GITHUB_ENV
           echo "${PLAN_SUMMARY}" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
-          # Check if plan file was created successfully on EC2 (basic check)
-          # A more robust check might involve checking for "No changes" or specific plan content
-          if ssh -o StrictHostKeyChecking=yes ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "[ -f ${REMOTE_PROJECT_PATH}/${TERRAFORM_DIR_IN_REPO}/tfplan ]"; then
+          if ssh -o StrictHostKeyChecking=yes "${EC2_USER_VAL}@${EC2_HOST_VAL}" "[ -f ${REMOTE_PROJECT_PATH}/${TERRAFORM_DIR_IN_REPO}/tfplan ]"; then
             echo "tfplan_exists=true" >> $GITHUB_OUTPUT
           else
             echo "tfplan_exists=false" >> $GITHUB_OUTPUT
             echo "::error::Terraform plan file (tfplan) was not created on EC2."
-            # exit 1 # Optionally fail the job if plan file isn't created.
-                   # Depending on terraform output, a plan might not be generated if there are init/validate errors.
-                   # The 'set -e' in SSH_COMMANDS should handle exiting on terraform command failures.
           fi
 
       - name: 'Display Plan Summary'
-        if: always() && env.plan_summary_env # Runs even if previous steps failed, if summary was captured
+        if: always() && env.plan_summary_env
         run: |
           echo "Terraform Plan Summary (from EC2):"
           echo "${{ env.plan_summary_env }}"
 
       - name: 'Run Terraform Apply on tools_ec2'
-        # Only run if action_type is 'apply' AND the plan step was generally successful
-        # (indicated by tfplan_exists, or you might rely on the plan step not failing due to 'set -e')
         if: github.event.inputs.action_type == 'apply' && steps.plan.outcome == 'success' && steps.plan.outputs.tfplan_exists == 'true'
         run: |
-          echo "User selected 'apply'. Proceeding to Terraform Apply for branch: ${{ github.event.inputs.branch }}"
+          EC2_USER_VAL="${{ secrets.EC2_USER }}"
+          EC2_HOST_VAL="${{ secrets.EC2_HOST }}"
+          # Use the branch slug from the sync step's output
+          BRANCH_NAME_SLUG_FROM_SYNC="${{ steps.sync.outputs.branch_name_slug_out }}"
+
+          if [ -z "$BRANCH_NAME_SLUG_FROM_SYNC" ] || [ -z "$EC2_USER_VAL" ] || [ -z "$EC2_HOST_VAL" ]; then
+            echo "::error::Critical variables (branch slug, EC2 user, or EC2 host) are missing in apply step."
+            exit 1
+          fi
+
+          echo "User selected 'apply'. Proceeding to Terraform Apply for branch: (determined as default)"
           REPO_NAME=$(echo "${{ github.repository }}" | cut -d'/' -f2)
           RUN_ID="${{ github.run_id }}"
-          BRANCH_NAME_SLUG=$(echo "${{ github.event.inputs.branch }}" | sed 's/[^a-zA-Z0-9]/-/g')
-          REMOTE_PROJECT_PATH="/home/${{ secrets.EC2_USER }}/terraform_runs/${REPO_NAME}/${BRANCH_NAME_SLUG}/${RUN_ID}"
+          REMOTE_PROJECT_PATH="/home/${EC2_USER_VAL}/terraform_runs/${REPO_NAME}/${BRANCH_NAME_SLUG_FROM_SYNC}/${RUN_ID}"
           TERRAFORM_DIR_IN_REPO="."
 
           echo "Attempting to apply Terraform configuration on tools_ec2 using the generated tfplan..."
           ssh -o StrictHostKeyChecking=yes \
-            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "cd ${REMOTE_PROJECT_PATH}/${TERRAFORM_DIR_IN_REPO} && terraform apply -input=false -auto-approve tfplan"
+            "${EC2_USER_VAL}@${EC2_HOST_VAL}" "cd ${REMOTE_PROJECT_PATH}/${TERRAFORM_DIR_IN_REPO} && terraform apply -input=false -auto-approve tfplan"
           echo "Terraform Apply command sent."
 
       - name: 'Clean up synced code on tools_ec2'
-        if: always() # Run this step even if previous steps fail
+        if: always()
         run: |
+          EC2_USER_VAL="${{ secrets.EC2_USER }}"
+          EC2_HOST_VAL="${{ secrets.EC2_HOST }}"
+          # Use the branch slug from the sync step's output if available, otherwise cleanup might be broader or fail
+          BRANCH_NAME_SLUG_FROM_SYNC="${{ steps.sync.outputs.branch_name_slug_out }}"
+
+          if [ -z "$BRANCH_NAME_SLUG_FROM_SYNC" ] || [ -z "$EC2_USER_VAL" ] || [ -z "$EC2_HOST_VAL" ]; then
+            echo "::warning::Skipping cleanup as critical variables (branch slug, EC2 user, or EC2 host) are missing."
+            exit 0
+          fi
+
           REPO_NAME=$(echo "${{ github.repository }}" | cut -d'/' -f2)
           RUN_ID="${{ github.run_id }}"
-          BRANCH_NAME_SLUG=$(echo "${{ github.event.inputs.branch }}" | sed 's/[^a-zA-Z0-9]/-/g')
-          REMOTE_PROJECT_PATH="/home/${{ secrets.EC2_USER }}/terraform_runs/${REPO_NAME}/${BRANCH_NAME_SLUG}/${RUN_ID}"
+          REMOTE_PROJECT_PATH="/home/${EC2_USER_VAL}/terraform_runs/${REPO_NAME}/${BRANCH_NAME_SLUG_FROM_SYNC}/${RUN_ID}"
 
           echo "Cleaning up remote directory: ${REMOTE_PROJECT_PATH}"
-          # Check if the directory exists before trying to remove it to avoid errors if sync failed
           ssh -o StrictHostKeyChecking=yes \
-            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "if [ -d ${REMOTE_PROJECT_PATH} ]; then rm -rf ${REMOTE_PROJECT_PATH}; echo 'Cleanup successful.'; else echo 'Remote directory not found, skipping cleanup.'; fi"
+            "${EC2_USER_VAL}@${EC2_HOST_VAL}" "if [ -d ${REMOTE_PROJECT_PATH} ]; then rm -rf ${REMOTE_PROJECT_PATH}; echo 'Cleanup successful.'; else echo 'Remote directory not found, skipping cleanup.'; fi"
           echo "Cleanup process finished."
