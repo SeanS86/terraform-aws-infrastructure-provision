@@ -44,8 +44,11 @@ This document outlines the steps taken to manually deploy a Kubernetes cluster (
 ## Shell Scripts Used
 
 The following scripts automate parts of the installation process. They should be placed on the respective nodes and made executable (`chmod +x <script_name>.sh`).
+
 **1. `prepare-node.sh`: Placed on both nodes, the worker_node & control_plane.**
+
 **2. `initialize-control-plane.sh`: Placed only on the control_plane.**
+
 **3. `join-worker-node.sh`: Placed only on the worker_node.**
 
 ## Phase 1: Prepare All Nodes (Control-Plane & Worker)
