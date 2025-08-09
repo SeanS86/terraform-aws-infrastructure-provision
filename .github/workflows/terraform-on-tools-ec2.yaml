@@ -109,7 +109,7 @@ jobs:
           echo 'Running Terraform Validate...' && \
           terraform validate -no-color && \
           echo 'Running Terraform Plan...' && \
-          terraform plan -input=false -no-color -out=tfplan
+          terraform plan -input=false -var-file=config.tfvars -no-color -out=tfplan
           "
           echo "Attempting to run Terraform plan commands on tools_ec2..."
           ssh -o StrictHostKeyChecking=yes \
@@ -158,7 +158,7 @@ jobs:
 
           echo "Attempting to apply Terraform configuration on tools_ec2 using the generated tfplan..."
           ssh -o StrictHostKeyChecking=yes \
-            "${EC2_USER_VAL}@${EC2_HOST_VAL}" "cd ${REMOTE_PROJECT_PATH}/${TERRAFORM_DIR_IN_REPO} && terraform apply -input=false -auto-approve tfplan"
+            "${EC2_USER_VAL}@${EC2_HOST_VAL}" "cd ${REMOTE_PROJECT_PATH}/${TERRAFORM_DIR_IN_REPO} && terraform apply -var-file=config.tfvars -input=false -auto-approve tfplan"
           echo "Terraform Apply command sent."
 
       - name: 'Clean up synced code on tools_ec2'
