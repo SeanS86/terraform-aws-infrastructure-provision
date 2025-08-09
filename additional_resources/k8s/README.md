@@ -18,11 +18,9 @@ This document outlines the steps taken to manually deploy a Kubernetes cluster (
 6.  [Phase 3: Join Worker Node to Cluster](#phase-3-join-worker-node-to-cluster)
     *   [Script: `join-worker-node.sh`](#script-join-worker-nodesh)
     *   [Execution](#execution-worker)
-7.  [Phase 4: Verify Cluster & Install Metrics Server](#phase-4-verify-cluster--install-metrics-server)
+7.  [Phase 4: Verify Cluster](#phase-4-verify-cluster)
     *   [Configuring `kubectl` Access](#configuring-kubectl-access)
     *   [Verification Commands](#verification-commands)
-    *   [Install Metrics Server](#install-metrics-server)
-    *   [Verify Metrics Server](#verify-metrics-server)
 
 ## Prerequisites
 
@@ -84,7 +82,7 @@ This script (`join-worker-node.sh`) is run **only** on the designated worker nod
 3.  Run as root: `sudo ./join-worker-node.sh`.
 4.  When prompted, paste the full `kubeadm join ...` command obtained from the control-plane initialization.
 
-## Phase 4: Verify Cluster & Install Metrics Server
+## Phase 4: Verify Cluster
 
 Perform these steps from the **control-plane node** or any machine configured with `kubectl` access to the new cluster (e.g., the Jump Box).
 
@@ -110,8 +108,8 @@ The `admin.conf` file should typically be placed at `~/.kube/config` on the mach
 
 - **To test:**
     `kubectl get nodes -o wide`,
-    `kubectl get pods -A`,
-    `kubectl get top pods -A`
+    `kubectl get pods -A` &
+    `kubectl top pods -A`
 
 ## Expected Terminal Outputs
 
