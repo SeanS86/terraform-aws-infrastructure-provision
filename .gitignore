@@ -40,5 +40,5 @@ tfplan
 .terraformrc
 terraform.rc
 
-id_rsa
-config
+#id_rsa
+#config
