@@ -1,23 +1,35 @@
-name: 'Terraform CI/CD via SSH to tools_ec2'
+name: 'Terraform CI/CD via SSH (Manual Trigger: Plan or Apply)'
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to checkout and run Terraform against'
+        required: true
+        default: 'main'
+        type: string
+      action_type:
+        description: 'Action to perform (plan or apply)'
+        required: true
+        default: 'plan'
+        type: choice
+        options:
+          - plan
+          - apply
 
 permissions:
-  contents: read
-  pull-requests: write
+  contents: read # To checkout the specified branch
 
 jobs:
   terraform-on-ec2:
-    name: 'Terraform on tools_ec2'
+    name: 'Terraform ${{ github.event.inputs.action_type }} on tools_ec2 for branch ${{ github.event.inputs.branch }}'
     runs-on: ubuntu-latest
 
     steps:
-      - name: 'Checkout code'
+      - name: 'Checkout code for specified branch'
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
 
       - name: 'Set up SSH Key'
         uses: webfactory/ssh-agent@v0.9.0
@@ -32,76 +44,94 @@ jobs:
           chmod 644 ~/.ssh/known_hosts
 
       - name: 'Sync Terraform code to tools_ec2'
+        id: sync # Give an id to reference its outputs if needed later, though not strictly needed here
         run: |
           REPO_NAME=$(echo "${{ github.repository }}" | cut -d'/' -f2)
           RUN_ID="${{ github.run_id }}"
+          BRANCH_NAME_SLUG=$(echo "${{ github.event.inputs.branch }}" | sed 's/[^a-zA-Z0-9]/-/g')
           REMOTE_BASE_PATH="/home/${{ secrets.EC2_USER }}/terraform_runs"
-          REMOTE_PROJECT_PATH="${REMOTE_BASE_PATH}/${REPO_NAME}/${RUN_ID}"
+          REMOTE_PROJECT_PATH="${REMOTE_BASE_PATH}/${REPO_NAME}/${BRANCH_NAME_SLUG}/${RUN_ID}"
+
+          echo "Remote project path will be: ${REMOTE_PROJECT_PATH}"
+          # Output for potential use in other steps, though cleanup uses these vars directly
+          echo "remote_project_path_out=${REMOTE_PROJECT_PATH}" >> $GITHUB_OUTPUT
+          echo "branch_name_slug_out=${BRANCH_NAME_SLUG}" >> $GITHUB_OUTPUT
+          echo "run_id_out=${RUN_ID}" >> $GITHUB_OUTPUT
+
 
           ssh -o StrictHostKeyChecking=yes \
             ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "mkdir -p ${REMOTE_PROJECT_PATH}"
 
-          # Using rsync is generally more efficient if available and configured
           rsync -avz -e "ssh -o StrictHostKeyChecking=yes" \
             ./ ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:${REMOTE_PROJECT_PATH}/
 
       - name: 'Run Terraform Init, Validate, Plan on tools_ec2'
-        id: plan
-        if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+        id: plan # Step ID for plan
         run: |
           REPO_NAME=$(echo "${{ github.repository }}" | cut -d'/' -f2)
-          RUN_ID="${{ github.run_id }}"
-          REMOTE_PROJECT_PATH="/home/${{ secrets.EC2_USER }}/terraform_runs/${REPO_NAME}/${RUN_ID}"
+          RUN_ID="${{ github.run_id }}" # Using directly, but could use steps.sync.outputs.run_id_out
+          BRANCH_NAME_SLUG=$(echo "${{ github.event.inputs.branch }}" | sed 's/[^a-zA-Z0-9]/-/g') # Using directly
+          REMOTE_PROJECT_PATH="/home/${{ secrets.EC2_USER }}/terraform_runs/${REPO_NAME}/${BRANCH_NAME_SLUG}/${RUN_ID}"
           TERRAFORM_DIR_IN_REPO="."
+
           SSH_COMMANDS="
+          set -e # Exit on error
           cd ${REMOTE_PROJECT_PATH}/${TERRAFORM_DIR_IN_REPO} && \
           echo 'Running Terraform Init...' && \
-          terraform init -input=false && \
+          terraform init -input=false -no-color && \
           echo 'Running Terraform Validate...' && \
-          terraform validate && \
+          terraform validate -no-color && \
           echo 'Running Terraform Plan...' && \
           terraform plan -input=false -no-color -out=tfplan
           "
-          echo "Attempting to run Terraform commands on tools_ec2..."
+          echo "Attempting to run Terraform plan commands on tools_ec2..."
           ssh -o StrictHostKeyChecking=yes \
-            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "${SSH_COMMANDS}" \
-            > plan_output.txt
-          cat plan_output.txt # Output to GitHub Actions logs
-          echo "Terraform commands sent."
-          PLAN_CONTENT=$(sed -n '/Plan: /,$p' plan_output.txt)
-          echo "TF_PLAN<<EOF" >> $GITHUB_ENV
-          echo "$PLAN_CONTENT" >> $GITHUB_ENV
+            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "${SSH_COMMANDS}" > plan_output.txt
+
+          echo "--- Terraform Plan Output from EC2 ---"
+          cat plan_output.txt
+          echo "--- End of Terraform Plan Output ---"
+
+          # Store the full plan output in an environment variable for potential display
+          # For very large plans, this might hit limits. Consider artifacts for full plan.
+          PLAN_SUMMARY=$(cat plan_output.txt)
+          echo "plan_summary_env<<EOF" >> $GITHUB_ENV
+          echo "${PLAN_SUMMARY}" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
-      - name: 'Comment PR with Terraform Plan'
-        if: github.event_name == 'pull_request' && env.TF_PLAN != ''
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const output = `#### Terraform Plan (from tools_ec2) 📜:
-            \`\`\`terraform\n
-            ${process.env.TF_PLAN}
-            \`\`\`
-            *Pushed by: @${{ github.actor }}, Action: ${{ github.event_name }}*`;
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: output
-            })
+          # Check if plan file was created successfully on EC2 (basic check)
+          # A more robust check might involve checking for "No changes" or specific plan content
+          if ssh -o StrictHostKeyChecking=yes ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "[ -f ${REMOTE_PROJECT_PATH}/${TERRAFORM_DIR_IN_REPO}/tfplan ]"; then
+            echo "tfplan_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "tfplan_exists=false" >> $GITHUB_OUTPUT
+            echo "::error::Terraform plan file (tfplan) was not created on EC2."
+            # exit 1 # Optionally fail the job if plan file isn't created.
+                   # Depending on terraform output, a plan might not be generated if there are init/validate errors.
+                   # The 'set -e' in SSH_COMMANDS should handle exiting on terraform command failures.
+          fi
+
+      - name: 'Display Plan Summary'
+        if: always() && env.plan_summary_env # Runs even if previous steps failed, if summary was captured
+        run: |
+          echo "Terraform Plan Summary (from EC2):"
+          echo "${{ env.plan_summary_env }}"
 
       - name: 'Run Terraform Apply on tools_ec2'
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push' # Add && steps.plan.outcome == 'success' if plan step is reliable
+        # Only run if action_type is 'apply' AND the plan step was generally successful
+        # (indicated by tfplan_exists, or you might rely on the plan step not failing due to 'set -e')
+        if: github.event.inputs.action_type == 'apply' && steps.plan.outcome == 'success' && steps.plan.outputs.tfplan_exists == 'true'
         run: |
+          echo "User selected 'apply'. Proceeding to Terraform Apply for branch: ${{ github.event.inputs.branch }}"
           REPO_NAME=$(echo "${{ github.repository }}" | cut -d'/' -f2)
           RUN_ID="${{ github.run_id }}"
-          REMOTE_PROJECT_PATH="/home/${{ secrets.EC2_USER }}/terraform_runs/${REPO_NAME}/${RUN_ID}"
-          TERRAFORM_DIR_IN_REPO="." # Or e.g., "terraform/"
+          BRANCH_NAME_SLUG=$(echo "${{ github.event.inputs.branch }}" | sed 's/[^a-zA-Z0-9]/-/g')
+          REMOTE_PROJECT_PATH="/home/${{ secrets.EC2_USER }}/terraform_runs/${REPO_NAME}/${BRANCH_NAME_SLUG}/${RUN_ID}"
+          TERRAFORM_DIR_IN_REPO="."
 
-          echo "Attempting to apply Terraform configuration on tools_ec2..."
+          echo "Attempting to apply Terraform configuration on tools_ec2 using the generated tfplan..."
           ssh -o StrictHostKeyChecking=yes \
-            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "cd ${REMOTE_PROJECT_PATH}/${TERRAFORM_DIR_IN_REPO} && terraform apply -auto-approve -input=false tfplan"
+            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "cd ${REMOTE_PROJECT_PATH}/${TERRAFORM_DIR_IN_REPO} && terraform apply -input=false -auto-approve tfplan"
           echo "Terraform Apply command sent."
 
       - name: 'Clean up synced code on tools_ec2'
@@ -109,8 +139,11 @@ jobs:
         run: |
           REPO_NAME=$(echo "${{ github.repository }}" | cut -d'/' -f2)
           RUN_ID="${{ github.run_id }}"
-          REMOTE_PROJECT_PATH="/home/${{ secrets.EC2_USER }}/terraform_runs/${REPO_NAME}/${RUN_ID}"
+          BRANCH_NAME_SLUG=$(echo "${{ github.event.inputs.branch }}" | sed 's/[^a-zA-Z0-9]/-/g')
+          REMOTE_PROJECT_PATH="/home/${{ secrets.EC2_USER }}/terraform_runs/${REPO_NAME}/${BRANCH_NAME_SLUG}/${RUN_ID}"
+
           echo "Cleaning up remote directory: ${REMOTE_PROJECT_PATH}"
+          # Check if the directory exists before trying to remove it to avoid errors if sync failed
           ssh -o StrictHostKeyChecking=yes \
-            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "rm -rf ${REMOTE_PROJECT_PATH}"
-          echo "Cleanup command sent."
+            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "if [ -d ${REMOTE_PROJECT_PATH} ]; then rm -rf ${REMOTE_PROJECT_PATH}; echo 'Cleanup successful.'; else echo 'Remote directory not found, skipping cleanup.'; fi"
+          echo "Cleanup process finished."
