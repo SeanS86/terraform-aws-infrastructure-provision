@@ -1,0 +1,136 @@
+name: Deploy Webserver via Ansible
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup SSH for tools_ec2
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.ID_RSA }}
+
+      - name: Add tools_ec2 to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+          # You might need to add the IP address as well if DNS is slow to propagate or changes
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Copy Ansible files to EC2 (Alternative to git clone on EC2)
+        if: success()
+        run: |
+          echo "Copying Ansible deployment files..."
+          # Ensure DEPLOY_DIR structure exists on EC2
+          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "mkdir -p ~/ansible_deployment/ansible_web_deploy"
+          
+          # Copy the contents of the ansible_web_deploy directory from your repo
+          # Corrected source path:
+          scp -o StrictHostKeyChecking=no -r ./additional_resources/ansible_web_deploy/* ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:~/ansible_deployment/ansible_web_deploy/
+          echo "Files copied."
+        # Note: scp -r of './additional_resources/ansible_web_deploy/*' copies the *contents* of that directory.
+        # This means playbook.yml, roles/, inventory.ini (if present there) will be directly under
+        # ~/ansible_deployment/ansible_web_deploy/ on the EC2 instance.
+
+      - name: SSH to tools_ec2 and run deployment
+        env:
+          EC2_HOSTNAME: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+        run: | 
+          ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOSTNAME} << 'EOF'
+            echo "--- Checking and Installing Dependencies on EC2 ---"
+          
+            # Function to check if a package is installed (Debian/Ubuntu specific)
+            is_pkg_installed() {
+              dpkg -s "$1" &> /dev/null
+            }
+          
+            # Update package list (do this once)
+            echo "Updating package list..."
+            sudo apt-get update -y
+          
+            # Install software-properties-common if not present (for add-apt-repository)
+            if ! is_pkg_installed software-properties-common; then
+              echo "Installing software-properties-common..."
+              sudo apt-get install -y software-properties-common
+            else
+              echo "software-properties-common is already installed."
+            fi
+          
+            # Check for Ansible
+            if ! command -v ansible &> /dev/null; then
+              echo "Ansible not found. Installing Ansible..."
+              # Add Ansible PPA if it doesn't exist (more robust check)
+              if ! grep -q "^deb .*ppa:ansible/ansible" /etc/apt/sources.list /etc/apt/sources.list.d/*; then
+                echo "Adding Ansible PPA..."
+                sudo add-apt-repository --yes --update ppa:ansible/ansible
+              else
+                echo "Ansible PPA already exists."
+                # Ensure apt cache is updated if PPA was already there but we haven't updated since last run
+                sudo apt-get update -y 
+              fi
+              sudo apt-get install -y ansible
+            else
+              echo "Ansible is already installed. Version: $(ansible --version | head -n 1)"
+            fi
+          
+            # Install Python pip if not present
+            if ! command -v pip3 &> /dev/null; then
+              echo "pip3 not found. Installing python3-pip..."
+              sudo apt-get install -y python3-pip
+            else
+              echo "pip3 is already installed."
+            fi
+          
+            # Install Ansible community.crypto collection if not present
+            if ! ansible-galaxy collection list | grep -q "^community\.crypto"; then
+              echo "Ansible collection community.crypto not found. Installing..."
+              ansible-galaxy collection install community.crypto
+            else
+              echo "Ansible collection community.crypto is already installed."
+            fi
+          
+            # Install Git if not present (still useful if you ever switch to git clone)
+            if ! command -v git &> /dev/null; then
+              echo "Git not found. Installing git..."
+              sudo apt-get install -y git
+            else
+              echo "Git is already installed."
+            fi
+          
+            echo "--- Dependency check complete ---"
+          
+            # Define the base deployment directory on EC2
+            # The target for scp was '~/ansible_deployment/ansible_web_deploy'
+            # So, the playbook files will be inside '~/ansible_deployment/ansible_web_deploy'
+            PLAYBOOK_DIR="~/ansible_deployment/ansible_web_deploy"
+          
+            # Navigate to the directory containing the playbook
+            cd $PLAYBOOK_DIR 
+          
+            echo "Current directory on EC2: $(pwd)"
+            echo "Listing files:"
+            ls -la
+          
+            echo "Ensuring inventory.ini is set for local execution..."
+            echo "[webservers]" > inventory.ini
+            echo "localhost ansible_connection=local ansible_python_interpreter=$(which python3 || echo /usr/bin/python3)" >> inventory.ini
+          
+            echo "Updated inventory.ini for local execution:"
+            cat inventory.ini
+          
+            echo "Running Ansible playbook..."
+            ansible-playbook -i inventory.ini playbook.yml
+          
+            echo "Ansible playbook execution finished."
+          
+            echo "--- Nginx Status ---"
+            sudo systemctl status nginx || echo "Nginx status check failed (is it installed and running?)"
+            echo "--- End of Nginx Status ---"
+          EOF
