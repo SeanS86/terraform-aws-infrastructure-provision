@@ -18,3 +18,4 @@ tools_ec2_ip              = "3.255.177.47/32"
 ami_id               = "ami-0043735dd4439caed" // an Ubuntu 22.04 LTS amd64
 
 ######################## Load_balancer variables  ######################
+dashboard_node_port  = "30865"

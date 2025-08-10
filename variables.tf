@@ -50,3 +50,7 @@ variable "ami_id" {
 }
 
 ################# Load balancer variables  ################
+variable "dashboard_node_port" {
+  description = "The NodePort assigned to the Kubernetes Dashboard service (kubernetes-dashboard-kong-proxy)."
+  type        = number
+}
