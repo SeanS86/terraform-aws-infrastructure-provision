@@ -8,10 +8,10 @@ metadata:
 spec:
   tls:
     - hosts:
-         - ss86-nlb-e3b661017739f32c.elb.eu-west-1.amazonaws.com
+         - ss86-nlb-3ecb186efbab9e44.elb.eu-west-1.amazonaws.com
       secretName: ss86-kong-tls-secret
   rules:
-    - host: ss86-nlb-e3b661017739f32c.elb.eu-west-1.amazonaws.com
+    - host: ss86-nlb-3ecb186efbab9e44.elb.eu-west-1.amazonaws.com
       http:
         paths:
            - path: /

@@ -96,7 +96,6 @@ module.load_balancer.aws_lb_listener.listener_https: Creation complete after 0s 
 Apply complete! Resources: 31 added, 0 changed, 0 destroyed.
 
 Outputs:
-
 all_private_subnet_ids = [
   "subnet-0c7a435ff04846dda",
   "subnet-0d1e211a431e06463",
@@ -116,7 +115,7 @@ k8s_node2_private_ip = "172.18.4.193"
 nat_gateway_eip_public_ip = "54.154.31.71"
 nat_gateway_id = "nat-04d2f96b41b9d5e0f"
 nat_gateway_public_subnet_id = "subnet-07eb63bcd09f5ce75"
-nlb_dns_name = "Ss86-nlb-e3b661017739f32c.elb.eu-west-1.amazonaws.com"
+nlb_dns_name = "ss86-nlb-3ecb186efbab9e44.elb.eu-west-1.amazonaws.com"
 nlb_zone_id = "Z2IFOLAFXWLO4F"
 private_route_table_id = "rtb-06161833a420f9546"
 private_subnet1_arn = "arn:aws:ec2:eu-west-1:723307514167:subnet/subnet-0c7a435ff04846dda"
