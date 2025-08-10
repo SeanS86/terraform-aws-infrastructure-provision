@@ -1,0 +1,30 @@
+enableSkipLogin: false
+# enableClusterAuthorization: true # If you want the dashboard to have broad cluster read access (use with caution)
+
+service:
+  type: NodePort
+  nodePort: 30123
+  externalPort: 443
+
+ingress:
+  enabled: false
+
+# RBAC settings
+rbac:
+  create: true
+  clusterRoleMetrics: true
+# Extra arguments for the dashboard deployment
+# For example, to set the auto-generate-certificates flag (if not using your own certs)
+# extraArgs:
+#   - --auto-generate-certificates
+#   - --namespace=kubernetes-dashboard # Ensure this matches where you deploy
+
+# If you have your own certificates, you can specify them
+# protocolHttp: false # Set to true if dashboard is accessed via HTTP (e.g. Ingress terminates SSL)
+# certs:
+#   keyFile: "" # Path to your key file within the container or a secret
+#   certFile: "" # Path to your cert file
+
+# We will create a separate ServiceAccount and ClusterRoleBinding for admin access later.
+# For now, the dashboard will deploy, but you won't be able to log in with full admin rights
+# until you set up the access token.

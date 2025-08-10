@@ -18,21 +18,10 @@ This document outlines the steps taken to manually deploy a Kubernetes cluster (
 6.  [Phase 3: Join Worker Node to Cluster](#phase-3-join-worker-node-to-cluster)
     *   [Script: `join-worker-node.sh`](#script-join-worker-nodesh)
     *   [Execution](#execution-worker)
-7.  [Phase 4: Verify Cluster & Install Metrics Server](#phase-4-verify-cluster--install-metrics-server)
+7.  [Phase 4: Verify Cluster](#phase-4-verify-cluster)
     *   [Configuring `kubectl` Access](#configuring-kubectl-access)
-    *   [Verification Commands](#verification-commands)
-    *   [Install Metrics Server](#install-metrics-server)
-    *   [Verify Metrics Server](#verify-metrics-server)
-8.  [Phase 5: Accessing the Kubernetes Dashboard](#phase-5-accessing-the-kubernetes-dashboard)
-    *   [Deploy Dashboard](#deploy-dashboard)
-    *   [Create Admin Service Account](#create-admin-service-account)
-    *   [Get Bearer Token](#get-bearer-token)
-    *   [Access via `kubectl proxy`](#access-via-kubectl-proxy)
-9.  [Expected Terminal Outputs](#expected-terminal-outputs)
-    *   [`kubectl get nodes -o wide`](#kubectl-get-nodes--o-wide)
-    *   [`kubectl get pods -A`](#kubectl-get-pods--a)
-    *   [`kubectl top nodes`](#kubectl-top-nodes)
-    *   [`kubectl top pods -A`](#kubectl-top-pods--a)
+    *   [After deployment tasks and some troubleshooting](#after-deployment-tasks-and-some-troubleshooting)
+    *   [Terminal Outputs](#terminal-outputs)
 
 ## Prerequisites
 
@@ -57,7 +46,11 @@ This document outlines the steps taken to manually deploy a Kubernetes cluster (
 
 The following scripts automate parts of the installation process. They should be placed on the respective nodes and made executable (`chmod +x <script_name>.sh`).
 
-*(Note: The content of these scripts will be detailed in the subsequent sections. You would typically either include the full script content directly in the README within code blocks or state that they are separate files in the repository, e.g., in a `scripts/` directory.)*
+**1. `prepare-node.sh`: Placed on both nodes, the worker_node & control_plane.**
+
+**2. `initialize-control-plane.sh`: Placed only on the control_plane.**
+
+**3. `join-worker-node.sh`: Placed only on the worker_node.**
 
 ## Phase 1: Prepare All Nodes (Control-Plane & Worker)
 
@@ -94,39 +87,79 @@ This script (`join-worker-node.sh`) is run **only** on the designated worker nod
 3.  Run as root: `sudo ./join-worker-node.sh`.
 4.  When prompted, paste the full `kubeadm join ...` command obtained from the control-plane initialization.
 
-## Phase 4: Verify Cluster & Install Metrics Server
+## Phase 4: Verify Cluster
 
-Perform these steps from the **control-plane node** or any machine configured with `kubectl` access to the new cluster (e.g., the Jump Box).
+Perform these steps from the **control-plane node** or any machine configured with `kubectl` access to the new cluster (jump_box).
 
 ### Configuring `kubectl` Access
-To use `kubectl` from a machine other than the control-plane node (e.g., the Jump Box):
+To use `kubectl` from a machine other than the control-plane node (jump_box):
 1.  Copy the kubeconfig file from the control-plane node:
+To manage your Kubernetes cluster from a remote machine using `kubectl`, you need the `kubeconfig` file. This file contains the cluster connection information and credentials.
+
+The primary administrative `kubeconfig` file on a control-plane node initialized with `kubeadm` is located at:
+
+*   `/etc/kubernetes/admin.conf`
+
+This file grants cluster-admin privileges and is typically the one you'll want to copy for external administrative access.
+
+
 2.  On the Jump Box (or your local machine):
+Once you have obtained the `admin.conf` file from your control-plane node, you can use it to access your Kubernetes cluster from a Jump Box or your local machine using `kubectl`.
 
-## Phase 5: Accessing the Kubernetes Dashboard
+The `admin.conf` file should typically be placed at `~/.kube/config` on the machine where you intend to run `kubectl` commands, or its path should be pointed to by the `KUBECONFIG` environment variable.
 
-The Kubernetes Dashboard provides a web-based UI for managing the cluster.
+- **Set the `KUBECONFIG` Environment Variable (if not using the default path):**
+    If you've placed the configuration file at a location other than `~/.kube/config`, or if you manage multiple cluster configurations, you'll need to tell `kubectl` where to find it.
 
-### Deploy Dashboard
-### Create Admin Service Account
-For administrative access to the dashboard (for testing/development purposes only; use fine-grained RBAC for production).
+- **Run the following commands to test and paste the outputs in the next section:** `kubectl get nodes -o wide`, `kubectl get pods -A` & `kubectl top pods -A`
 
-Create `dashboard-adminuser.yaml`:
+### After deployment tasks and some troubleshooting
 
-Copy the output token. This will be used to log in to the Dashboard.
+Metrics Server was installed to provide resource usage metrics.
 
-### Access via `kubectl proxy`
-This method makes the dashboard accessible on `localhost` via the `kubectl` utility.
-1.  Run `kubectl proxy` in a terminal:
-2.  Open a web browser and navigate to:
-    `http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/`
-3.  When prompted, select "Token" and paste the bearer token obtained earlier.
+**1. Apply the Metrics Server Manifest:**
+Deployed from the control-plane node (or any machine with `kubectl` access):
 
-## Expected Terminal Outputs
+**2. Modify Metrics Server Deployment for `kubeadm` (if necessary):**
+For `kubeadm` clusters, it's sometimes necessary to allow the Metrics Server to communicate with kubelets insecurely, especially if kubelet certificates are self-signed or internal hostnames are not robustly resolvable.
 
-*(This section is a placeholder. You need to capture the actual output from your cluster after successful deployment and paste it here within code blocks.)*
+Add the `--kubelet-insecure-tls` argument to the container's `args`:
 
-<a name="kubectl-get-nodes--o-wide"></a>
-### `kubectl get nodes -o wide`
-<a name="kubectl-get-pods--a"></a>
-### `kubectl get pods -A`
+**Problem Identified:**
+Initial attempts to use `kubectl top pods` resulted in `error: Metrics API not available`. Further investigation of `calico-node` pods revealed they were not `READY` due to BGP peering failures. The `describe pod` output for `calico-node` showed:
+
+This indicated that the AWS Security Group associated with the K8s nodes was blocking the necessary Calico traffic.
+
+**Solution: Updating AWS Security Group Ingress Rules**
+
+1.  **Allow BGP (TCP Port 179):** For Calico nodes to establish BGP sessions for route exchange.
+2.  **Allow IP-in-IP (IP Protocol 4):** Because Calico was configured with `CALICO_IPV4POOL_IPIP: Always` for pod traffic encapsulation.
+
+### Terminal Outputs
+
+```
+ubuntu@ip-172-18-3-234:~$ kubectl get nodes -o wide
+NAME              STATUS   ROLES           AGE   VERSION   INTERNAL-IP    EXTERNAL-IP   OS-IMAGE             KERNEL-VERSION   CONTAINER-RUNTIME
+ip-172-18-3-234   Ready    control-plane   15h   v1.29.1   172.18.3.234   <none>        Ubuntu 22.04.5 LTS   6.8.0-1027-aws   containerd://1.7.27
+ip-172-18-4-193   Ready    <none>          15h   v1.29.1   172.18.4.193   <none>        Ubuntu 22.04.5 LTS   6.8.0-1027-aws   containerd://1.7.27
+ubuntu@ip-172-18-3-234:~$ kubectl get pods -A
+NAMESPACE     NAME                                       READY   STATUS    RESTARTS   AGE
+kube-system   calico-kube-controllers-5fc7d6cf67-8g9zf   1/1     Running   0          15h
+kube-system   calico-node-8nlw6                          1/1     Running   0          15h
+kube-system   calico-node-v9qbn                          1/1     Running   0          15h
+kube-system   coredns-76f75df574-sms8m                   1/1     Running   0          15h
+kube-system   coredns-76f75df574-vghkk                   1/1     Running   0          15h
+kube-system   etcd-ip-172-18-3-234                       1/1     Running   0          15h
+kube-system   kube-apiserver-ip-172-18-3-234             1/1     Running   0          15h
+kube-system   kube-controller-manager-ip-172-18-3-234    1/1     Running   0          15h
+kube-system   kube-proxy-tb67l                           1/1     Running   0          15h
+kube-system   kube-proxy-whm6z                           1/1     Running   0          15h
+kube-system   kube-scheduler-ip-172-18-3-234             1/1     Running   0          15h
+kube-system   metrics-server-59d465df9f-4wz5l            1/1     Running   0          11h
+ubuntu@ip-172-18-3-234:~$ kubectl top pods -A
+NAMESPACE     NAME                              CPU(cores)   MEMORY(bytes)
+kube-system   calico-node-v9qbn                 30m          114Mi
+kube-system   kube-proxy-tb67l                  1m           11Mi
+kube-system   metrics-server-59d465df9f-4wz5l   3m           17Mi
+
+```

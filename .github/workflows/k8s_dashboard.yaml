@@ -1,0 +1,123 @@
+name: Deploy K8s Dashboard
+
+on:
+  workflow_dispatch: # Allows manual triggering
+  # push:
+  #   branches:
+  #     - main # Or your deployment branch
+
+env:
+  TOOLS_EC2_HOST: ${{ secrets.EC2_HOST }}
+  TOOLS_EC2_USER: ${{ secrets.EC2_USER }}
+  JUMP_BOX_HOST: ${{ secrets.JUMP_BOX }}
+  JUMP_BOX_USER: ${{ secrets.EC2_USER }} # the username is the same on all EC2 instances
+  K8S_NAMESPACE: kubernetes-dashboard
+
+  # Local paths relative to the project root
+  LOCAL_DASHBOARD_VALUES_PATH: additional_resources/k8s_dashboard/dashboard-values.yaml
+  LOCAL_DASHBOARD_ADMIN_PATH: additional_resources/k8s_dashboard/dashboard-admin.yaml
+  LOCAL_DEPLOYMENT_SCRIPT_PATH: additional_resources/k8s_dashboard/dashboard_deployment.sh
+
+  # Remote paths on the jump_box
+  REMOTE_BASE_PATH: ~/k8s_dashboard_deploy # Base directory on jump_box for these files
+  # Computed remote paths (will be used in the script execution step)
+  # REMOTE_DASHBOARD_VALUES_PATH will become ~/k8s_dashboard_deploy/dashboard-values.yaml
+  # REMOTE_DASHBOARD_ADMIN_PATH will become ~/k8s_dashboard_deploy/dashboard-admin.yaml
+  # REMOTE_DEPLOYMENT_SCRIPT_PATH will become ~/k8s_dashboard_deploy/dashboard_deployment.sh
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup SSH Agent for Multi-Hop
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.ID_RSA }} # same private key across all EC2 instances
+        run: |
+          mkdir -p ~/.ssh
+          echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          eval "$(ssh-agent -s)"
+          ssh-add ~/.ssh/id_rsa
+          echo "SSH_AUTH_SOCK=${SSH_AUTH_SOCK}" >> $GITHUB_ENV
+          echo "SSH_AGENT_PID=${SSH_AGENT_PID}" >> $GITHUB_ENV
+          echo "Successfully added SSH key to agent."
+
+      - name: Copy Deployment Files to Jump Box via Tools EC2
+        env:
+          SSH_AUTH_SOCK: ${{ env.SSH_AUTH_SOCK }}
+          SSH_AGENT_PID: ${{ env.SSH_AGENT_PID }}
+        run: |
+          # Define remote paths for clarity within this step
+          REMOTE_VALUES_FILENAME=$(basename "${{ env.LOCAL_DASHBOARD_VALUES_PATH }}")
+          REMOTE_ADMIN_FILENAME=$(basename "${{ env.LOCAL_DASHBOARD_ADMIN_PATH }}")
+          REMOTE_SCRIPT_FILENAME=$(basename "${{ env.LOCAL_DEPLOYMENT_SCRIPT_PATH }}")
+
+          TEMP_DIR_TOOLS_EC2="/tmp/k8s_dashboard_deploy_$$" # Unique temp dir on tools_ec2
+          REMOTE_TARGET_DIR_JUMP_BOX="${{ env.REMOTE_BASE_PATH }}" # Target dir on jump_box
+
+          echo "Copying files to tools_ec2 temporary directory (${TEMP_DIR_TOOLS_EC2})..."
+          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/id_rsa \
+            "${{ env.TOOLS_EC2_USER }}@${{ env.TOOLS_EC2_HOST }}" "mkdir -p ${TEMP_DIR_TOOLS_EC2}"
+
+          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/id_rsa \
+            "${{ env.LOCAL_DASHBOARD_VALUES_PATH }}" \
+            "${{ env.TOOLS_EC2_USER }}@${{ env.TOOLS_EC2_HOST }}:${TEMP_DIR_TOOLS_EC2}/${REMOTE_VALUES_FILENAME}"
+
+          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/id_rsa \
+            "${{ env.LOCAL_DASHBOARD_ADMIN_PATH }}" \
+            "${{ env.TOOLS_EC2_USER }}@${{ env.TOOLS_EC2_HOST }}:${TEMP_DIR_TOOLS_EC2}/${REMOTE_ADMIN_FILENAME}"
+
+          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/id_rsa \
+            "${{ env.LOCAL_DEPLOYMENT_SCRIPT_PATH }}" \
+            "${{ env.TOOLS_EC2_USER }}@${{ env.TOOLS_EC2_HOST }}:${TEMP_DIR_TOOLS_EC2}/${REMOTE_SCRIPT_FILENAME}"
+
+          echo "Forwarding files from tools_ec2 to jump_box (${REMOTE_TARGET_DIR_JUMP_BOX})..."
+          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/id_rsa \
+            "${{ env.TOOLS_EC2_USER }}@${{ env.TOOLS_EC2_HOST }}" << EOF_SCP_FORWARD
+          set -e
+          echo "Ensuring target directory exists on jump_box: ${REMOTE_TARGET_DIR_JUMP_BOX}"
+          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ForwardAgent=yes \
+            "${{ env.JUMP_BOX_USER }}@${{ env.JUMP_BOX_HOST }}" "mkdir -p ${REMOTE_TARGET_DIR_JUMP_BOX}"
+
+          echo "Copying directory from tools_ec2 to jump_box..."
+          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ForwardAgent=yes -r \
+            "${TEMP_DIR_TOOLS_EC2}/." \
+            "${{ env.JUMP_BOX_USER }}@${{ env.JUMP_BOX_HOST }}:${REMOTE_TARGET_DIR_JUMP_BOX}/"
+            # Note: Using scp -r and "${TEMP_DIR_TOOLS_EC2}/." copies the *contents* of the directory
+
+          echo "Cleaning up temporary directory on tools_ec2 (${TEMP_DIR_TOOLS_EC2})..."
+          rm -rf "${TEMP_DIR_TOOLS_EC2}"
+          EOF_SCP_FORWARD
+          echo "Deployment files copied to jump_box."
+
+      - name: Execute Deployment Script on Jump Box
+        env:
+          SSH_AUTH_SOCK: ${{ env.SSH_AUTH_SOCK }}
+          SSH_AGENT_PID: ${{ env.SSH_AGENT_PID }}
+          # Pass necessary variables to the remote script
+          # The script expects these to be set in its environment
+          K8S_NAMESPACE: ${{ env.K8S_NAMESPACE }}
+          REMOTE_DASHBOARD_VALUES_PATH: "${{ env.REMOTE_BASE_PATH }}/$(basename '${{ env.LOCAL_DASHBOARD_VALUES_PATH }}')"
+          REMOTE_DASHBOARD_ADMIN_PATH: "${{ env.REMOTE_BASE_PATH }}/$(basename '${{ env.LOCAL_DASHBOARD_ADMIN_PATH }}')"
+        run: |
+          REMOTE_SCRIPT_FILENAME=$(basename "${{ env.LOCAL_DEPLOYMENT_SCRIPT_PATH }}")
+          REMOTE_SCRIPT_EXEC_PATH="${{ env.REMOTE_BASE_PATH }}/${REMOTE_SCRIPT_FILENAME}"
+
+          echo "Executing deployment script on jump_box: ${REMOTE_SCRIPT_EXEC_PATH}"
+          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+              -o ProxyCommand="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -W %h:%p -i ~/.ssh/id_rsa ${{ env.TOOLS_EC2_USER }}@${{ env.TOOLS_EC2_HOST }}" \
+              -i ~/.ssh/id_rsa \
+              "${{ env.JUMP_BOX_USER }}@${{ env.JUMP_BOX_HOST }}" "chmod +x ${REMOTE_SCRIPT_EXEC_PATH} && ${REMOTE_SCRIPT_EXEC_PATH}"
+
+      - name: Cleanup SSH Agent
+        if: always()
+        run: |
+          echo "Cleaning up SSH agent and key..."
+          if [ ! -z "${SSH_AGENT_PID}" ]; then
+            eval "$(ssh-agent -k)"
+          fi
+          rm -f ~/.ssh/id_rsa
+          echo "Cleanup complete."

@@ -69,6 +69,20 @@ resource "aws_security_group" "sg2" {
     protocol    = "tcp"
     cidr_blocks = [var.vpc_cidr] # Allow from within the VPC
   }
+  ingress {
+    description = "Calico BGP Peering (node-to-node)"
+    from_port   = 179
+    to_port     = 179
+    protocol    = "tcp"
+    self        = true
+  }
+  ingress {
+    description = "Calico IP-in-IP (node-to-node)"
+    from_port   = -1
+    to_port     = -1
+    protocol    = "4" # Protocol number for IP-in-IP
+    self        = true
+  }
 
   egress {
     from_port   = 0

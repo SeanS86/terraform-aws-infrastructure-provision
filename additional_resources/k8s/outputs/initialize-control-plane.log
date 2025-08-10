@@ -1,0 +1,188 @@
+ubuntu@ip-172-18-3-234:~/cp_scripts$ sudo ./initialize-control-plane.sh
++ echo 'Starting Kubernetes Control-Plane Initialization...'
+Starting Kubernetes Control-Plane Initialization...
++ POD_NETWORK_CIDR=192.168.0.0/16
++ echo 'Using Pod Network CIDR: 192.168.0.0/16'
+Using Pod Network CIDR: 192.168.0.0/16
+++ hostname -I
+++ awk '{print $1}'
++ CONTROL_PLANE_PRIVATE_IP=172.18.3.234
++ '[' -z 172.18.3.234 ']'
++ echo 'Control Plane Advertise IP: 172.18.3.234'
+Control Plane Advertise IP: 172.18.3.234
++ echo 'Pulling required Kubernetes images for control plane...'
+Pulling required Kubernetes images for control plane...
++ sudo kubeadm config images pull --cri-socket unix:///var/run/containerd/containerd.sock
+I0808 16:51:54.937125    3873 version.go:256] remote version is much newer: v1.33.3; falling back to: stable-1.29
+[config/images] Pulled registry.k8s.io/kube-apiserver:v1.29.15
+[config/images] Pulled registry.k8s.io/kube-controller-manager:v1.29.15
+[config/images] Pulled registry.k8s.io/kube-scheduler:v1.29.15
+[config/images] Pulled registry.k8s.io/kube-proxy:v1.29.15
+[config/images] Pulled registry.k8s.io/coredns/coredns:v1.11.1
+[config/images] Pulled registry.k8s.io/pause:3.9
+[config/images] Pulled registry.k8s.io/etcd:3.5.10-0
+++ kubeadm version -o short
++ K8S_VERSION_SHORT=v1.29.1
++ echo 'Initializing Kubernetes control plane (version v1.29.1)...'
+Initializing Kubernetes control plane (version v1.29.1)...
++ sudo kubeadm init --pod-network-cidr=192.168.0.0/16 --apiserver-advertise-address=172.18.3.234 --cri-socket unix:///var/run/containerd/containerd.sock --kubernetes-version v1.29.1
+[init] Using Kubernetes version: v1.29.1
+[preflight] Running pre-flight checks
+[preflight] Pulling images required for setting up a Kubernetes cluster
+[preflight] This might take a minute or two, depending on the speed of your internet connection
+[preflight] You can also perform this action in beforehand using 'kubeadm config images pull'
+W0808 16:52:19.478114    3927 checks.go:835] detected that the sandbox image "registry.k8s.io/pause:3.8" of the container runtime is inconsistent with that used by kubeadm. It is recommended that using "registry.k8s.io/pause:3.9" as the CRI sandbox image.
+[certs] Using certificateDir folder "/etc/kubernetes/pki"
+[certs] Generating "ca" certificate and key
+[certs] Generating "apiserver" certificate and key
+[certs] apiserver serving cert is signed for DNS names [ip-172-18-3-234 kubernetes kubernetes.default kubernetes.default.svc kubernetes.default.svc.cluster.local] and IPs [10.96.0.1 172.18.3.234]
+[certs] Generating "apiserver-kubelet-client" certificate and key
+[certs] Generating "front-proxy-ca" certificate and key
+[certs] Generating "front-proxy-client" certificate and key
+[certs] Generating "etcd/ca" certificate and key
+[certs] Generating "etcd/server" certificate and key
+[certs] etcd/server serving cert is signed for DNS names [ip-172-18-3-234 localhost] and IPs [172.18.3.234 127.0.0.1 ::1]
+[certs] Generating "etcd/peer" certificate and key
+[certs] etcd/peer serving cert is signed for DNS names [ip-172-18-3-234 localhost] and IPs [172.18.3.234 127.0.0.1 ::1]
+[certs] Generating "etcd/healthcheck-client" certificate and key
+[certs] Generating "apiserver-etcd-client" certificate and key
+[certs] Generating "sa" key and public key
+[kubeconfig] Using kubeconfig folder "/etc/kubernetes"
+[kubeconfig] Writing "admin.conf" kubeconfig file
+[kubeconfig] Writing "super-admin.conf" kubeconfig file
+[kubeconfig] Writing "kubelet.conf" kubeconfig file
+[kubeconfig] Writing "controller-manager.conf" kubeconfig file
+[kubeconfig] Writing "scheduler.conf" kubeconfig file
+[etcd] Creating static Pod manifest for local etcd in "/etc/kubernetes/manifests"
+[control-plane] Using manifest folder "/etc/kubernetes/manifests"
+[control-plane] Creating static Pod manifest for "kube-apiserver"
+[control-plane] Creating static Pod manifest for "kube-controller-manager"
+[control-plane] Creating static Pod manifest for "kube-scheduler"
+[kubelet-start] Writing kubelet environment file with flags to file "/var/lib/kubelet/kubeadm-flags.env"
+[kubelet-start] Writing kubelet configuration to file "/var/lib/kubelet/config.yaml"
+[kubelet-start] Starting the kubelet
+[wait-control-plane] Waiting for the kubelet to boot up the control plane as static Pods from directory "/etc/kubernetes/manifests". This can take up to 4m0s
+[apiclient] All control plane components are healthy after 7.501710 seconds
+[upload-config] Storing the configuration used in ConfigMap "kubeadm-config" in the "kube-system" Namespace
+[kubelet] Creating a ConfigMap "kubelet-config" in namespace kube-system with the configuration for the kubelets in the cluster
+[upload-certs] Skipping phase. Please see --upload-certs
+[mark-control-plane] Marking the node ip-172-18-3-234 as control-plane by adding the labels: [node-role.kubernetes.io/control-plane node.kubernetes.io/exclude-from-external-load-balancers]
+[mark-control-plane] Marking the node ip-172-18-3-234 as control-plane by adding the taints [node-role.kubernetes.io/control-plane:NoSchedule]
+[bootstrap-token] Using token: cwzi4g.ujj0f2l12s167w65
+[bootstrap-token] Configuring bootstrap tokens, cluster-info ConfigMap, RBAC Roles
+[bootstrap-token] Configured RBAC rules to allow Node Bootstrap tokens to get nodes
+[bootstrap-token] Configured RBAC rules to allow Node Bootstrap tokens to post CSRs in order for nodes to get long term certificate credentials
+[bootstrap-token] Configured RBAC rules to allow the csrapprover controller automatically approve CSRs from a Node Bootstrap Token
+[bootstrap-token] Configured RBAC rules to allow certificate rotation for all node client certificates in the cluster
+[bootstrap-token] Creating the "cluster-info" ConfigMap in the "kube-public" namespace
+[kubelet-finalize] Updating "/etc/kubernetes/kubelet.conf" to point to a rotatable kubelet client certificate and key
+[addons] Applied essential addon: CoreDNS
+[addons] Applied essential addon: kube-proxy
+
+Your Kubernetes control-plane has initialized successfully!
+
+To start using your cluster, you need to run the following as a regular user:
+
+  mkdir -p $HOME/.kube
+  sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+  sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+Alternatively, if you are the root user, you can run:
+
+  export KUBECONFIG=/etc/kubernetes/admin.conf
+
+You should now deploy a pod network to the cluster.
+Run "kubectl apply -f [podnetwork].yaml" with one of the options listed at:
+  https://kubernetes.io/docs/concepts/cluster-administration/addons/
+
+Then you can join any number of worker nodes by running the following on each as root:
+
+kubeadm join 172.18.3.234:6443 --token cwzi4g.ujj0f2l12s167w65 \
+        --discovery-token-ca-cert-hash sha256:3e374af8cf2e4167c52a3058308d1435c5f007842684c3adf0fa8cde348b180f
+++ whoami
++ echo 'Setting up kubectl access for the '\''root'\'' user...'
+Setting up kubectl access for the 'root' user...
++ mkdir -p /root/.kube
++ sudo cp -i /etc/kubernetes/admin.conf /root/.kube/config
+++ id -u
+++ id -g
++ sudo chown 0:0 /root/.kube/config
++ export KUBECONFIG=/root/.kube/config
++ KUBECONFIG=/root/.kube/config
++ echo 'kubectl configuration copied to /root/.kube/config'
+kubectl configuration copied to /root/.kube/config
++ echo 'You may need to run '\''export KUBECONFIG=$HOME/.kube/config'\'' in new shells or add it to your .bashrc/.zshrc'
+You may need to run 'export KUBECONFIG=$HOME/.kube/config' in new shells or add it to your .bashrc/.zshrc
++ echo ''
+
++ echo ----------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------
++ echo 'IMPORTANT: The Kubernetes control plane has been initialized.'
+IMPORTANT: The Kubernetes control plane has been initialized.
++ echo 'To join worker nodes to this cluster, run the following command on each worker node:'
+To join worker nodes to this cluster, run the following command on each worker node:
++ echo '(This command is also saved in the output of '\''kubeadm init'\'' above)'
+(This command is also saved in the output of 'kubeadm init' above)
++ echo ''
+
++ echo 'Example: sudo kubeadm join 172.18.3.234:6443 --token <your_token> \'
+Example: sudo kubeadm join 172.18.3.234:6443 --token <your_token> \
++ echo '              --discovery-token-ca-cert-hash sha256:<your_ca_cert_hash>'
+              --discovery-token-ca-cert-hash sha256:<your_ca_cert_hash>
++ echo ''
+
++ echo 'PLEASE COPY THE EXACT '\''kubeadm join ...'\'' COMMAND FROM THE OUTPUT ABOVE THIS MESSAGE.'
+PLEASE COPY THE EXACT 'kubeadm join ...' COMMAND FROM THE OUTPUT ABOVE THIS MESSAGE.
++ echo ----------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------
++ echo ''
+
++ echo 'Installing Calico Pod Network Add-on...'
+Installing Calico Pod Network Add-on...
++ CALICO_VERSION=v3.27.0
++ echo 'Applying Calico manifest (version v3.27.0)...'
+Applying Calico manifest (version v3.27.0)...
++ kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.27.0/manifests/calico.yaml
+poddisruptionbudget.policy/calico-kube-controllers created
+serviceaccount/calico-kube-controllers created
+serviceaccount/calico-node created
+serviceaccount/calico-cni-plugin created
+configmap/calico-config created
+customresourcedefinition.apiextensions.k8s.io/bgpconfigurations.crd.projectcalico.org created
+customresourcedefinition.apiextensions.k8s.io/bgpfilters.crd.projectcalico.org created
+customresourcedefinition.apiextensions.k8s.io/bgppeers.crd.projectcalico.org created
+customresourcedefinition.apiextensions.k8s.io/blockaffinities.crd.projectcalico.org created
+customresourcedefinition.apiextensions.k8s.io/caliconodestatuses.crd.projectcalico.org created
+customresourcedefinition.apiextensions.k8s.io/clusterinformations.crd.projectcalico.org created
+customresourcedefinition.apiextensions.k8s.io/felixconfigurations.crd.projectcalico.org created
+customresourcedefinition.apiextensions.k8s.io/globalnetworkpolicies.crd.projectcalico.org created
+customresourcedefinition.apiextensions.k8s.io/globalnetworksets.crd.projectcalico.org created
+customresourcedefinition.apiextensions.k8s.io/hostendpoints.crd.projectcalico.org created
+customresourcedefinition.apiextensions.k8s.io/ipamblocks.crd.projectcalico.org created
+customresourcedefinition.apiextensions.k8s.io/ipamconfigs.crd.projectcalico.org created
+customresourcedefinition.apiextensions.k8s.io/ipamhandles.crd.projectcalico.org created
+customresourcedefinition.apiextensions.k8s.io/ippools.crd.projectcalico.org created
+customresourcedefinition.apiextensions.k8s.io/ipreservations.crd.projectcalico.org created
+customresourcedefinition.apiextensions.k8s.io/kubecontrollersconfigurations.crd.projectcalico.org created
+customresourcedefinition.apiextensions.k8s.io/networkpolicies.crd.projectcalico.org created
+customresourcedefinition.apiextensions.k8s.io/networksets.crd.projectcalico.org created
+clusterrole.rbac.authorization.k8s.io/calico-kube-controllers created
+clusterrole.rbac.authorization.k8s.io/calico-node created
+clusterrole.rbac.authorization.k8s.io/calico-cni-plugin created
+clusterrolebinding.rbac.authorization.k8s.io/calico-kube-controllers created
+clusterrolebinding.rbac.authorization.k8s.io/calico-node created
+clusterrolebinding.rbac.authorization.k8s.io/calico-cni-plugin created
+daemonset.apps/calico-node created
+deployment.apps/calico-kube-controllers created
++ echo 'Calico installation initiated.'
+Calico installation initiated.
++ echo 'Wait for Calico and CoreDNS pods in '\''kube-system'\'' namespace to be in '\''Running'\'' state.'
+Wait for Calico and CoreDNS pods in 'kube-system' namespace to be in 'Running' state.
++ echo 'You can check with: kubectl get pods -n kube-system -w'
+You can check with: kubectl get pods -n kube-system -w
++ echo ''
+
++ echo 'Control-Plane Initialization Complete.'
+Control-Plane Initialization Complete.
++ echo 'You can now join worker nodes using the '\''kubeadm join'\'' command that was printed.'
+You can now join worker nodes using the 'kubeadm join' command that was printed.
