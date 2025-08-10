@@ -1,6 +1,6 @@
 ################ Global variables ###############
 region                    = "eu-west-1"
-project                   = "Ss86"
+project                   = "ss86"
 
 ################## VPC variables  ################
 vpc_cidr                  = "172.18.0.0/16"
