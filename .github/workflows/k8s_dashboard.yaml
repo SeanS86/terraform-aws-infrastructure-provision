@@ -34,7 +34,7 @@ jobs:
 
       - name: Setup SSH Agent for Multi-Hop
         env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY_BASTION }}
+          SSH_PRIVATE_KEY: ${{ secrets.ID_RSA }} # same private key across all EC2 instances
         run: |
           mkdir -p ~/.ssh
           echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
