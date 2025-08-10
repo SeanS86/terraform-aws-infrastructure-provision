@@ -1,0 +1,83 @@
+_format_version: "3.0"
+
+certificates:
+  - sni: ss86-nlb-3ecb186efbab9e44.elb.eu-west-1.amazonaws.com # Your NLB DNS
+    # These paths will exist once you mount the secret in the pod spec
+    key: /etc/kong/secrets/ss86-kong-tls-secret/tls.key
+    cert: /etc/kong/secrets/ss86-kong-tls-secret/tls.crt
+
+services:
+  - name: auth
+    host: kubernetes-dashboard-auth.kubernetes-dashboard.svc.cluster.local # Using FQDN for clarity
+    port: 8000
+    protocol: http
+  - name: api
+    host: kubernetes-dashboard-api.kubernetes-dashboard.svc.cluster.local # Using FQDN
+    port: 8000
+    protocol: http
+  - name: web
+    host: kubernetes-dashboard-web.kubernetes-dashboard.svc.cluster.local # Using FQDN
+    port: 8000
+    protocol: http
+
+routes:
+  # Routes for the 'auth' service
+  - name: authLogin-https
+    protocols:
+      - https
+    hosts:
+      - ss86-nlb-3ecb186efbab9e44.elb.eu-west-1.amazonaws.com
+    paths:
+      - /api/v1/login
+    strip_path: false
+    service: auth
+  - name: authCsrf-https
+    protocols:
+      - https
+    hosts:
+      - ss86-nlb-3ecb186efbab9e44.elb.eu-west-1.amazonaws.com
+    paths:
+      - /api/v1/csrftoken/login
+    strip_path: false
+    service: auth
+  - name: authMe-https
+    protocols:
+      - https
+    hosts:
+      - ss86-nlb-3ecb186efbab9e44.elb.eu-west-1.amazonaws.com
+    paths:
+      - /api/v1/me
+    strip_path: false
+    service: auth
+
+  # Routes for the 'api' service
+  - name: api-https
+    protocols:
+      - https
+    hosts:
+      - ss86-nlb-3ecb186efbab9e44.elb.eu-west-1.amazonaws.com
+    paths:
+      - /api # This will also match /api/v1/login etc. if not ordered carefully or more specific paths used.
+      # Given the specific auth paths above, this should be okay.
+    strip_path: false
+    service: api
+  - name: metrics-https
+    protocols:
+      - https
+    hosts:
+      - ss86-nlb-3ecb186efbab9e44.elb.eu-west-1.amazonaws.com
+    paths:
+      - /metrics
+    strip_path: false
+    service: api # Assuming metrics are served by the 'api' service
+
+  # Route for the 'web' service (main UI)
+  - name: root-https
+    protocols:
+      - https
+    hosts:
+      - ss86-nlb-3ecb186efbab9e44.elb.eu-west-1.amazonaws.com
+    paths: # Order matters; more specific paths should come before broader ones if they overlap.
+      - / # This is a catch-all for the host
+    strip_path: false
+    service: web
