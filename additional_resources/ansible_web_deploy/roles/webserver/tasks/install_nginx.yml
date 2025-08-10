@@ -1,0 +1,23 @@
+---
+- name: Update apt cache (Debian/Ubuntu)
+  ansible.builtin.apt:
+    update_cache: true
+  when: ansible_os_family == "Debian"
+  become: true
+
+- name: Install Nginx (Debian/Ubuntu)
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+  when: ansible_os_family == "Debian"
+  become: true
+  notify: Restart Nginx
+
+# Add equivalent for RHEL/CentOS if needed
+# - name: Install Nginx (RedHat/CentOS)
+#   ansible.builtin.yum:
+#     name: nginx
+#     state: present
+#   when: ansible_os_family == "RedHat"
+#   become: true
+#   notify: Restart Nginx

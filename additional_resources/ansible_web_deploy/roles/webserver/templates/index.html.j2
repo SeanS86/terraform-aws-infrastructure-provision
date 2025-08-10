@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Ansible Deployed Web Server</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f4f4; color: #333; }
+        .container { background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h1 { color: #007BFF; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Hello from Ansible!</h1>
+        <p>This page is served by Nginx, configured by Ansible.</p>
+        <p><strong>Server Hostname:</strong> {{ ansible_facts['hostname'] }}</p>
+        <p><strong>Server FQDN:</strong> {{ ansible_facts['fqdn'] }}</p>
+        <p><strong>Server IP Address (default IPv4):</strong> {{ ansible_facts['default_ipv4']['address'] }}</p>
+    </div>
+</body>
+</html>

@@ -1,0 +1,6 @@
+---
+- name: Deploy and Configure Web Server
+  hosts: webservers
+  become: true # Most tasks in the role require sudo
+  roles:
+    - webserver

@@ -1,0 +1,47 @@
+---
+- name: Create SSL directory
+  ansible.builtin.file:
+    path: "{{ ssl_cert_path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+
+- name: Generate self-signed SSL certificate key
+  community.crypto.openssl_privatekey:
+    path: "{{ ssl_key_file }}"
+    size: 2048
+    owner: root
+    group: root
+    mode: '0600'
+  become: true
+  notify: Restart Nginx
+
+- name: Generate self-signed SSL certificate (CSR)
+  community.crypto.openssl_csr:
+    path: /etc/nginx/ssl/nginx-selfsigned.csr
+    privatekey_path: "{{ ssl_key_file }}"
+    common_name: "{{ ansible_fqdn }}" # Use the server's FQDN for CN
+    # You can add more subject details if needed from ssl_subj or directly
+    subject:
+      C: US
+      ST: California
+      L: YourCity
+      O: YourOrganization
+      OU: YourUnit
+      commonName: "{{ ansible_fqdn }}" # Important for matching hostname
+  become: true
+  notify: Restart Nginx
+
+- name: Generate self-signed SSL certificate from CSR
+  community.crypto.x509_certificate:
+    path: "{{ ssl_cert_file }}"
+    csr_path: /etc/nginx/ssl/nginx-selfsigned.csr
+    privatekey_path: "{{ ssl_key_file }}"
+    provider: selfsigned # or ownca if you have a CA
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  notify: Restart Nginx
