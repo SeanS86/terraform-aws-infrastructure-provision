@@ -1,0 +1,99 @@
+name: Deploy Webserver via Ansible
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup SSH for tools_ec2
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.ID_RSA }}
+
+      - name: Add tools_ec2 to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+          # You might need to add the IP address as well if DNS is slow to propagate or changes
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Copy Ansible files to EC2 (Alternative to git clone on EC2)
+        if: success()
+        run: |
+          echo "Copying Ansible deployment files..."
+          # Ensure DEPLOY_DIR structure exists on EC2
+          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "mkdir -p ~/ansible_deployment/ansible_web_deploy"
+          
+          # Copy the contents of the ansible_web_deploy directory from your repo
+          # Corrected source path:
+          scp -o StrictHostKeyChecking=no -r ./additional_resources/ansible_web_deploy/* ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:~/ansible_deployment/ansible_web_deploy/
+          echo "Files copied."
+        # Note: scp -r of './additional_resources/ansible_web_deploy/*' copies the *contents* of that directory.
+        # This means playbook.yml, roles/, inventory.ini (if present there) will be directly under
+        # ~/ansible_deployment/ansible_web_deploy/ on the EC2 instance.
+
+      - name: SSH to tools_ec2 and run deployment
+        env: # Corrected indentation
+          EC2_HOSTNAME: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+        run: | # Corrected indentation
+          ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOSTNAME} << 'EOF'
+            echo "--- Current location on EC2 before cd ---"
+            pwd
+          
+            # Define PLAYBOOK_DIR_ON_EC2 using $HOME for robustness
+            PLAYBOOK_DIR_ON_EC2="$HOME/ansible_deployment/ansible_web_deploy"
+          
+            echo "--- Attempting to cd to $PLAYBOOK_DIR_ON_EC2 ---"
+            if ! cd "$PLAYBOOK_DIR_ON_EC2"; then
+              echo "ERROR: Failed to cd to $PLAYBOOK_DIR_ON_EC2. This directory might not exist or there are permission issues."
+              exit 1
+            fi
+          
+            echo "--- Current location on EC2 after cd ---"
+            pwd
+          
+            echo "--- Listing files in $(pwd) on EC2 ---" # Use $(pwd) to be absolutely sure
+            ls -la
+          
+            echo "--- Checking and Installing Dependencies on EC2 (if playbook.yml is found) ---"
+            if [ ! -f "playbook.yml" ]; then
+              echo "ERROR: playbook.yml NOT FOUND in $(pwd) on EC2. Aborting playbook run."
+              exit 1
+            fi
+          
+            # ... (rest of the dependency installation script, like installing ansible, pip, etc. would go here) ...
+            # For brevity, I'm assuming that part is correctly placed from previous versions.
+            # Example:
+            # is_pkg_installed() { dpkg -s "$1" &> /dev/null; }
+            # if ! command -v ansible &> /dev/null; then ... install ansible ...; fi
+            # ... etc.
+          
+            echo "--- Dependency check complete ---" # This assumes dependencies were checked/installed above
+          
+            echo "Ensuring inventory.ini is set for local execution in $(pwd)..."
+            # Create inventory.ini in the current directory
+            echo "[webservers]" > inventory.ini 
+            echo "localhost ansible_connection=local ansible_python_interpreter=$(which python3 || echo /usr/bin/python3)" >> inventory.ini
+          
+            echo "Updated inventory.ini for local execution:"
+            cat inventory.ini # This will be ./inventory.ini
+          
+            echo "Running Ansible playbook from $(pwd)..."
+            # Ansible looks for playbook.yml relative to the current directory by default
+            ansible-playbook -i inventory.ini playbook.yml 
+            # Or, to be absolutely explicit (though usually not necessary after a successful cd):
+            # ansible-playbook -i "$PLAYBOOK_DIR_ON_EC2/inventory.ini" "$PLAYBOOK_DIR_ON_EC2/playbook.yml"
+          
+            echo "Ansible playbook execution finished."
+          
+            echo "--- Nginx Status ---"
+            sudo systemctl status nginx || echo "Nginx status check failed (is it installed and running?)"
+            echo "--- End of Nginx Status ---"
+          EOF

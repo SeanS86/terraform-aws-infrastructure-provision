@@ -1,0 +1,43 @@
+server {
+    listen {{ http_port }};
+    listen [::]:{{ http_port }};
+    server_name {{ ansible_fqdn }} _; # Listen on FQDN and as default
+
+    root {{ web_root_dir }};
+    index index.html index.htm;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    # Redirect HTTP to HTTPS
+    # For testing, you might want to comment this out initially
+    # return 301 https://$host$request_uri;
+}
+
+server {
+    listen {{ https_port }} ssl http2;
+    listen [::]:{{ https_port }} ssl http2;
+    server_name {{ ansible_fqdn }}; # Listen on FQDN for SSL
+
+    root {{ web_root_dir }};
+    index index.html index.htm;
+
+    ssl_certificate {{ ssl_cert_file }};
+    ssl_certificate_key {{ ssl_key_file }};
+
+    # Improve SSL Security (Optional, but recommended)
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers on;
+    ssl_ciphers ECDH+AESGCM:ECDH+CHACHA20:DH+AESGCM:DH+CHACHA20:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:!aNULL:!MD5:!DSS;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
+    ssl_session_tickets off; # Consider security implications
+
+    # HSTS (Optional: tells browsers to always use HTTPS for this domain)
+    # add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+}
