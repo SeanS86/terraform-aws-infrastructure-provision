@@ -46,9 +46,11 @@ The Ansible playbook deployment is automated using the GitHub Actions workflow d
 Once the GitHub Actions workflow has completed successfully, you can access your deployed web page.
 
 **Access the Page in Your Web Browser:**
-    *   **For Nginx serving on HTTP (port 80):**
-        Open your web browser and go to `http://3.255.177.47`
-    *   **For Nginx serving on HTTPS (port 443) (we generated a self-signed certificate):**
-        Open your web browser and go to `https://3.255.177.47`
-    The page should then load, displaying the content from the `index.html.j2` template, which typically shows the server's hostname.
+*   **For Nginx serving on HTTP (port 80):**
+    Open your web browser and go to `http://3.255.177.47`
+
+*   **For Nginx serving on HTTPS (port 443) (we generated a self-signed certificate):**
+    Open your web browser and go to `https://3.255.177.47`
+
+The page should then load, displaying the content from the `index.html.j2` template, which typically shows the server's hostname.
 
