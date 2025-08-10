@@ -22,10 +22,6 @@ The deployment is automated using a GitHub Actions workflow.
 ### For the Ansible Playbook on the Target Server:
 *   The playbook will attempt to install Python and Ansible if they are not present.
 
-## Project Structure
-
-. ├── ansible_web_deploy          # Main directory for Ansible deployment │   ├── ansible.cfg             # Ansible configuration │   ├── inventory.ini           # Example inventory, managed by GitHub Action for local EC2 execution │   ├── playbook.yml            # Main Ansible playbook │   └── roles │       └── webserver           # Role for Nginx web server setup │           ├── handlers │           │   └── main.yml │           ├── tasks │           │   ├── configure_site.yml │           │   ├── configure_ssl.yml │           │   ├── install_nginx.yml │           │   └── main.yml │           ├── templates │           │   ├── default.conf.j2   # Nginx site configuration template │           │   └── index.html.j2   # Sample web page template │           └── vars │               └── Debian.yml      # OS-specific variables (can be empty) ├── .github │   └── workflows │       └── deploy_ansible.yml  # GitHub Actions workflow for deployment └── README.md                   # This file
-
 ## Deployment Steps (via GitHub Actions)
 
 The Ansible playbook deployment is automated using the GitHub Actions workflow defined in `.github/workflows/deploy_webserver.yml`.
