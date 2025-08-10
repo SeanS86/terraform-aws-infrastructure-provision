@@ -31,28 +31,26 @@ resource "aws_lb_target_group" "tg_dashboard_https" {
 resource "aws_lb_target_group_attachment" "tg_attachment_dashboard_node1" {
   target_group_arn = aws_lb_target_group.tg_dashboard_https.arn
   target_id        = var.k8s_node1_id
-  port             = var.dashboard_node_port # CRITICAL: Target instance port is the NodePort
+  port             = var.dashboard_node_port
 }
 
 resource "aws_lb_target_group_attachment" "tg_attachment_dashboard_node2" {
   target_group_arn = aws_lb_target_group.tg_dashboard_https.arn
   target_id        = var.k8s_node2_id
-  port             = var.dashboard_node_port # CRITICAL: Target instance port is the NodePort
+  port             = var.dashboard_node_port
 }
 
-# --- Listener for Kubernetes Dashboard (HTTPS) ---
 resource "aws_lb_listener" "listener_dashboard_https" {
   load_balancer_arn = aws_lb.nlb.arn
-  port              = "443"
-  protocol          = "TCP"
+  port              = 443
+  protocol          = "TCP"  # <-- NLB forwards raw TCP traffic
   default_action {
     target_group_arn = aws_lb_target_group.tg_dashboard_https.arn
     type             = "forward"
   }
 
   tags = {
-    Name    = "${var.project_name}-nlb-listener-dashboard-https"
+    Name    = "${var.project_name}-nlb-listener-dashboard-tcp-443"
     Project = var.project_name
   }
 }
-
