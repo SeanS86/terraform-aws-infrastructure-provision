@@ -13,11 +13,7 @@ The deployment is automated using a GitHub Actions workflow.
 *   **GitHub Secrets:** The following secrets must be configured in your GitHub repository settings (`Settings` > `Secrets and variables` > `Actions`):
     *   `ID_RSA`: The *contents* of your private SSH key for accessing the target server.
     *   `EC2_HOST`: The public IP address or DNS name of the target server.
-    *   `EC2_USER`: The SSH username for the target server (e.g., `ubuntu`, `ec2-user`).
-*   **Target Server Security Group / Firewall:** The target server's firewall (e.g., AWS Security Group, `ufw`) must allow inbound traffic on:
-    *   Port 22 (for SSH by the GitHub Action runner).
-    *   Port 80 (for HTTP access to the web server).
-    *   Port 443 (for HTTPS access to the web server).
+    *   `EC2_USER`: The SSH username for the target server (`ubuntu`).
 
 ### For the Ansible Playbook on the Target Server:
 *   The playbook will attempt to install Python and Ansible if they are not present.
