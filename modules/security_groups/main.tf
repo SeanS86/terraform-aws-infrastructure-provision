@@ -3,7 +3,7 @@ provider "aws" {
 }
 
 resource "aws_security_group" "sg1" {
-  name        = "${var.project_name}-sg1-bastion-access"
+  name        = "Ss86-sg1-bastion-access"
   description = "Allow SSH from Tools EC2 to Bastion/Jumpbox"
   vpc_id      = var.vpc_id
 
@@ -23,14 +23,13 @@ resource "aws_security_group" "sg1" {
   }
 
   tags = {
-    Name    = "${var.project_name}-sg1-bastion-access"
-    Project = var.project_name
+    Name    = "Ss86-sg1-bastion-access"
     Role    = "BastionAccess"
   }
 }
 
 resource "aws_security_group" "sg2" {
-  name        = "${var.project_name}-sg2-application"
+  name        = "Ss86-sg2-application"
   description = "Application Security Group"
   vpc_id      = var.vpc_id
 
@@ -100,8 +99,7 @@ resource "aws_security_group" "sg2" {
   }
 
   tags = {
-    Name    = "${var.project_name}-sg2-application"
-    Project = var.project_name
+    Name    = "Ss86-sg2-application"
     Role    = "Application"
   }
 }
