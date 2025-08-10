@@ -1,23 +1,23 @@
 apiVersion: networking.k8s.io/v1
-  kind: Ingress
-  metadata:
-    name: kubernetes-dashboard-kong-proxy
-    namespace: kubernetes-dashboard
-    annotations:
-      kubernetes.io/ingress.class: kong
-  spec:
-    tls:
-      - hosts:
-          - Ss86-nlb-e3b661017739f32c.elb.eu-west-1.amazonaws.com
-        secretName: ss86-kong-tls-secret
-    rules:
-      - host: Ss86-nlb-e3b661017739f32c.elb.eu-west-1.amazonaws.com
-        http:
-          paths:
-            - path: /
-              pathType: Prefix
-              backend:
-                service:
-                  name: kubernetes-dashboard-kong-proxy
-                  port:
-                    number: 30865
+kind: Ingress
+metadata:
+  name: kubernetes-dashboard-kong-proxy
+  namespace: kubernetes-dashboard
+  annotations:
+    kubernetes.io/ingress.class: kong
+spec:
+  tls:
+    - hosts:
+         - Ss86-nlb-e3b661017739f32c.elb.eu-west-1.amazonaws.com
+      secretName: ss86-kong-tls-secret
+  rules:
+    - host: Ss86-nlb-e3b661017739f32c.elb.eu-west-1.amazonaws.com
+      http:
+        paths:
+           - path: /
+             pathType: Prefix
+             backend:
+               service:
+                 name: kubernetes-dashboard-kong-proxy
+                 port:
+                  number: 30865
