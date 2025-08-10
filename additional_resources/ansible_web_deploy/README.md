@@ -43,7 +43,7 @@ The Ansible playbook deployment is automated using the GitHub Actions workflow d
 
 ## Accessing the Deployed Web Page
 
-Once the GitHub Actions workflow has completed successfully, you can access your deployed web page.
+Once the GitHub Actions workflow has completed successfully, you can access the deployed web page.
 
 **Access the Page in Your Web Browser:**
 *   **For Nginx serving on HTTP (port 80):**
