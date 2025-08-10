@@ -1,0 +1,19 @@
+---
+- name: Include OS-specific variables
+  ansible.builtin.include_vars: "{{ ansible_os_family }}.yml"
+  ignore_errors: true # In case there's no OS-specific var file
+
+- name: Install Nginx
+  ansible.builtin.include_tasks: install_nginx.yml
+
+- name: Configure SSL
+  ansible.builtin.include_tasks: configure_ssl.yml
+
+- name: Configure Nginx site
+  ansible.builtin.include_tasks: configure_site.yml
+
+- name: Ensure Nginx is started and enabled
+  ansible.builtin.systemd:
+    name: nginx
+    state: started
+    enabled: true

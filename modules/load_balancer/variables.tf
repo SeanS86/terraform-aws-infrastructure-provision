@@ -28,3 +28,8 @@ variable "k8s_node2_id" {
   description = "Instance ID of the second Kubernetes node."
   type        = string
 }
+
+variable "dashboard_node_port" {
+  description = "The NodePort assigned to the Kubernetes Dashboard service (kubernetes-dashboard-kong-proxy)."
+  type        = number
+}

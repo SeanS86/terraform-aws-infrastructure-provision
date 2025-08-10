@@ -8,4 +8,6 @@ module "load_balancer" {
   vpc_id            = module.vpc.vpc_id
   k8s_node1_id      = module.ec2.k8s_node1_id
   k8s_node2_id      = module.ec2.k8s_node2_id
+
+  dashboard_node_port = var.dashboard_node_port
 }

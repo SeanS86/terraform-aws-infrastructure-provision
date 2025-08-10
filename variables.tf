@@ -7,7 +7,7 @@ variable "region" {
 variable "project" {
   description = "The AWS region to create resources in."
   type        = string
-  default     = "SS86"
+  default     = "ss86"
 }
 
 ########### VPC variables ############################
@@ -50,3 +50,7 @@ variable "ami_id" {
 }
 
 ################# Load balancer variables  ################
+variable "dashboard_node_port" {
+  description = "The NodePort assigned to the Kubernetes Dashboard service (kubernetes-dashboard-kong-proxy)."
+  type        = number
+}

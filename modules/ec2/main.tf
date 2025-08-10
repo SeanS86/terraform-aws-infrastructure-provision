@@ -6,7 +6,7 @@ resource "aws_key_pair" "imported_tf_managed" {
   key_name   = "tf-managed-key"
   public_key = file("./modules/ec2/files/id_rsa.pub") # encrypted with ansible-vault
 }
-# --- EC2 Instances ---
+
 resource "aws_instance" "jump_box" {
   ami                    = var.ami_id
   instance_type          = var.instance_type

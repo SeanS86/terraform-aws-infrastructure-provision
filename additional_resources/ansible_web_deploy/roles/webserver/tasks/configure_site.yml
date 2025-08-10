@@ -1,0 +1,36 @@
+---
+- name: Create web root directory
+  ansible.builtin.file:
+    path: "{{ web_root_dir }}"
+    state: directory
+    mode: '0755'
+  become: true
+
+- name: Create index.html from template
+  ansible.builtin.template:
+    src: index.html.j2
+    dest: "{{ site_content_file }}"
+    owner: www-data # Or appropriate user for your Nginx setup
+    group: www-data # Or appropriate group
+    mode: '0644'
+  become: true
+
+- name: Configure Nginx default site
+  ansible.builtin.template:
+    src: nginx_site.conf.j2 # We will create this template next
+    dest: /etc/nginx/sites-available/default # Overwrite default for simplicity
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  notify: Reload Nginx # Use reload for config changes, restart for certs/modules
+
+# Ensure sites-enabled has the link (often default is already linked)
+- name: Ensure default site is enabled
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/default
+    dest: /etc/nginx/sites-enabled/default
+    state: link
+    force: true # Recreate link if it points elsewhere or is not a link
+  become: true
+  notify: Reload Nginx

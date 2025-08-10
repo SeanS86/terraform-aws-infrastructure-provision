@@ -1,6 +1,6 @@
 ################ Global variables ###############
 region                    = "eu-west-1"
-project                   = "Ss86"
+project                   = "ss86"
 
 ################## VPC variables  ################
 vpc_cidr                  = "172.18.0.0/16"
@@ -18,3 +18,4 @@ tools_ec2_ip              = "3.255.177.47/32"
 ami_id               = "ami-0043735dd4439caed" // an Ubuntu 22.04 LTS amd64
 
 ######################## Load_balancer variables  ######################
+dashboard_node_port  = "30865"

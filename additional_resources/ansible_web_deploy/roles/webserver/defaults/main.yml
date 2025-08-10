@@ -1,0 +1,14 @@
+---
+# Default web server port
+http_port: 80
+https_port: 443
+
+# SSL Certificate details (for self-signed)
+ssl_cert_path: /etc/nginx/ssl
+ssl_key_file: "{{ ssl_cert_path }}/nginx-selfsigned.key"
+ssl_cert_file: "{{ ssl_cert_path }}/nginx-selfsigned.crt"
+ssl_subj: "/C=US/ST=California/L=SanFrancisco/O=MyOrg/OU=DevOps/CN={{ ansible_fqdn }}"
+
+# Web content
+web_root_dir: /var/www/html
+site_content_file: "{{ web_root_dir }}/index.html"
