@@ -34,7 +34,7 @@ The Ansible playbook deployment is automated using the GitHub Actions workflow d
 **The GitHub Action will:**
 *   Check out your repository on a GitHub-hosted runner.
 *   Set up SSH access to your target server using the provided secrets.
-*   Copy the Ansible files from `./ansible_web_deploy/` (or the configured path) to the target server.
+*   Copy the Ansible files from `./additional_resources/ansible_web_deploy/` to the target server.
 *   Execute the `playbook.yml` on the target server. This playbook will:
     *   Install Nginx and its dependencies.
     *   Configure a default Nginx site.
