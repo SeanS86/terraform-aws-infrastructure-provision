@@ -1,0 +1,47 @@
+ubuntu@ip-172-18-1-83:~/scripts$ helm repo add kubernetes-dashboard https://kubernetes.github.io/dashboard/ --force-update
+"kubernetes-dashboard" has been added to your repositories
+ubuntu@ip-172-18-1-83:~/scripts$ helm repo update
+Hang tight while we grab the latest from your chart repositories...
+...Successfully got an update from the "kubernetes-dashboard" chart repository
+Update Complete. ⎈Happy Helming!⎈
+ubuntu@ip-172-18-1-83:~/scripts$ kubectl create namespace kubernetes-dashboard --dry-run=client -o yaml | kubectl apply -f -
+namespace/kubernetes-dashboard created
+ubuntu@ip-172-18-1-83:~/scripts$ helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard --namespace kubernetes-dashboard -f dashboard-values.yaml --atomic --timeout 10m0s --wait
+Release "kubernetes-dashboard" does not exist. Installing it now.
+NAME: kubernetes-dashboard
+LAST DEPLOYED: Sun Aug 10 12:11:52 2025
+NAMESPACE: kubernetes-dashboard
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
+NOTES:
+*************************************************************************************************
+*** PLEASE BE PATIENT: Kubernetes Dashboard may need a few minutes to get up and become ready ***
+*************************************************************************************************
+
+Congratulations! You have just installed Kubernetes Dashboard in your cluster.
+
+To access Dashboard run:
+  kubectl -n kubernetes-dashboard port-forward svc/kubernetes-dashboard-kong-proxy 8443:443
+
+NOTE: In case port-forward command does not work, make sure that kong service name is correct.
+      Check the services in Kubernetes Dashboard namespace using:
+        kubectl -n kubernetes-dashboard get svc
+
+Dashboard will be available at:
+  https://localhost:8443
+ubuntu@ip-172-18-1-83:~/scripts$ kubectl get pods -n kubernetes-dashboard
+NAME                                                    READY   STATUS    RESTARTS   AGE
+kubernetes-dashboard-api-6dc76d455-n896k                1/1     Running   0          74s
+kubernetes-dashboard-auth-597c7dcc7b-tslw8              1/1     Running   0          74s
+kubernetes-dashboard-kong-694bd68766-ds2ht              1/1     Running   0          74s
+kubernetes-dashboard-metrics-scraper-79ddb8cd78-fxvl2   1/1     Running   0          74s
+kubernetes-dashboard-web-5c84bb867f-l6jbd               1/1     Running   0          74s
+ubuntu@ip-172-18-1-83:~/scripts$ kubectl get svc -n kubernetes-dashboard
+NAME                                   TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)    AGE
+kubernetes-dashboard-api               ClusterIP   10.106.113.42    <none>        8000/TCP   25m
+kubernetes-dashboard-auth              ClusterIP   10.110.114.30    <none>        8000/TCP   25m
+kubernetes-dashboard-kong-proxy        ClusterIP   10.100.206.159   <none>        443/TCP    25m
+kubernetes-dashboard-metrics-scraper   ClusterIP   10.97.46.101     <none>        8000/TCP   25m
+kubernetes-dashboard-web               ClusterIP   10.107.162.40    <none>        8000/TCP   25m
+

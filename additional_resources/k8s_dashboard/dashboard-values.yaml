@@ -1,10 +1,14 @@
 enableSkipLogin: false
 # enableClusterAuthorization: true # If you want the dashboard to have broad cluster read access (use with caution)
 
-service:
-  type: NodePort
-  nodePort: 30123
-  externalPort: 443
+#service:
+#  type: NodePort
+#  nodePort: 30123
+#  externalPort: 443
+
+kong:
+  proxy:
+    type: NodePort
 
 ingress:
   enabled: false
