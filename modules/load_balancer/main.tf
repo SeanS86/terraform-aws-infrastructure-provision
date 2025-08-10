@@ -1,9 +1,8 @@
-# --- Network Load Balancer ---
 resource "aws_lb" "nlb" {
   name               = "${var.project_name}-nlb"
   internal           = false
   load_balancer_type = "network"
-  subnets            = [var.public_subnet1_id, var.public_subnet2_id] # Ensure these are public subnets for external access
+  subnets            = [var.public_subnet1_id, var.public_subnet2_id]
 
   tags = {
     Name    = "${var.project_name}-nlb"
@@ -11,7 +10,6 @@ resource "aws_lb" "nlb" {
   }
 }
 
-# --- Target Group for Kubernetes Dashboard (HTTPS/NodePort) ---
 resource "aws_lb_target_group" "tg_dashboard_https" {
   name     = "${var.project_name}-tg-dashboard-https"
   port     = var.dashboard_node_port

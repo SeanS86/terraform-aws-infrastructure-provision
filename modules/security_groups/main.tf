@@ -84,6 +84,14 @@ resource "aws_security_group" "sg2" {
     self        = true
   }
 
+  ingress {
+    description = "Kubelet API (10250) from other nodes in this SG (control-plane to worker)"
+    from_port   = 10250
+    to_port     = 10250
+    protocol    = "tcp"
+    self        = true
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
