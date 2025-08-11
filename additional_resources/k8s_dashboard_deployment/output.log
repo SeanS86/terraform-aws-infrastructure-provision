@@ -47,3 +47,61 @@ kubernetes-dashboard-web               ClusterIP   10.107.162.40    <none>      
 ubuntu@ip-172-18-1-83:~/scripts$     kubectl get svc -n kubernetes-dashboard kubernetes-dashboard-kong-proxy -o wide
 NAME                              TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)   AGE   SELECTOR
 kubernetes-dashboard-kong-proxy   ClusterIP   10.100.206.159   <none>        443/TCP   32m   app.kubernetes.io/component=app,app.kubernetes.io/instance=kubernetes-dashboard,app.kubernetes.io/name=kong
+
+==========================================
+ubuntu@ip-172-19-0-96:~/terraform-aws-infrastructure-provision$ aws elbv2 describe-target-health --target-group-arn arn:aws:elasticloadbalancing:eu-west-1:723307514167:targetgroup/ss86-tg-dashboard-https/2476d754231ca580 --region eu-west-1
+{
+    "TargetHealthDescriptions": [
+        {
+            "Target": {
+                "Id": "i-0e1f966e8804b2ba7",
+                "Port": 30865
+            },
+            "HealthCheckPort": "30865",
+            "TargetHealth": {
+                "State": "healthy"
+            },
+            "AdministrativeOverride": {
+                "State": "no_override",
+                "Reason": "AdministrativeOverride.NoOverride",
+                "Description": "No override is currently active on target"
+            }
+        },
+        {
+            "Target": {
+                "Id": "i-0293e94897525f46e",
+:...skipping...
+{
+    "TargetHealthDescriptions": [
+        {
+            "Target": {
+                "Id": "i-0e1f966e8804b2ba7",
+                "Port": 30865
+            },
+            "HealthCheckPort": "30865",
+            "TargetHealth": {
+                "State": "healthy"
+            },
+            "AdministrativeOverride": {
+                "State": "no_override",
+                "Reason": "AdministrativeOverride.NoOverride",
+                "Description": "No override is currently active on target"
+            }
+        },
+        {
+            "Target": {
+                "Id": "i-0293e94897525f46e",
+                "Port": 30865
+            },
+            "HealthCheckPort": "30865",
+            "TargetHealth": {
+                "State": "healthy"
+            },
+            "AdministrativeOverride": {
+                "State": "no_override",
+                "Reason": "AdministrativeOverride.NoOverride",
+                "Description": "No override is currently active on target"
+            }
+        }
+    ]
+}

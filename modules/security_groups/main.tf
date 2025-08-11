@@ -48,6 +48,13 @@ resource "aws_security_group" "sg2" {
     cidr_blocks = ["0.0.0.0/0"]
   }
   ingress {
+    description      = "Kubernetes Dashboard HTTPS via Kong NodePort"
+    from_port        = var.dashboard_node_port
+    to_port          = var.dashboard_node_port
+    protocol         = "tcp"
+    cidr_blocks      = ["0.0.0.0/0"] # For testing. Restrict if needed.
+  }
+  ingress {
     description = "HTTPS access"
     from_port   = 443
     to_port     = 443
