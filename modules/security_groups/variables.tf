@@ -17,3 +17,8 @@ variable "tools_ec2_ip" {
   description = "The CIDR block or IP for the tools EC2 instance (e.g., 'x.x.x.x/32')."
   type        = string
 }
+
+variable "dashboard_node_port" {
+  description = "The NodePort assigned to the Kubernetes Dashboard service (kubernetes-dashboard-kong-proxy)."
+  type        = number
+}

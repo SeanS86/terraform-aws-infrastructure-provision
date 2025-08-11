@@ -96,6 +96,7 @@ module.load_balancer.aws_lb_listener.listener_https: Creation complete after 0s 
 Apply complete! Resources: 31 added, 0 changed, 0 destroyed.
 
 Outputs:
+
 all_private_subnet_ids = [
   "subnet-0c7a435ff04846dda",
   "subnet-0d1e211a431e06463",
@@ -139,7 +140,3 @@ sg1_id = "sg-0ba04c8dfa841071a"
 sg2_id = "sg-0589df93864dbfd13"
 vpc_arn = "arn:aws:ec2:eu-west-1:723307514167:vpc/vpc-00da8dfd5479ccb03"
 vpc_cidr_block = "172.18.0.0/16"
-vpc_default_network_acl_id = "acl-0e02976b351043101"
-vpc_default_route_table_id = "rtb-0311067dbdd9f5129"
-vpc_default_security_group_id = "sg-070b77e580ebf7844"
-vpc_id = "vpc-00da8dfd5479ccb03"
