@@ -119,3 +119,4 @@ The `curl -vki https://<worker-node-ip>:30865` test successfully returning the d
 The ability for Kong to listen on port `30865` and serve the Kubernetes Dashboard is achieved by:
 1.  Defining the Kong proxy's Kubernetes `Service` as `type: NodePort` with `nodePort: 30865` and mapping it to Kong's internal HTTPS listener port.
 2.  Ensuring Kong has the necessary routing rules (via Ingress, TCPIngress, or its configuration) to forward requests received on that internal port to the upstream `kubernetes-dashboard` service.
+    The following `ingress` block was added to the `aws_security_group` resource corresponding to `sg-0589df93864dbfd13`:
