@@ -13,7 +13,14 @@ The project is organized into the following Terraform modules:
 
 The root directory contains the main configuration files that orchestrate these modules.
 
-## Infrastructure Provisioned
+***PLEASE NOTE:*** There are other resources that will be commissioned to run on the infrastructure. All the setup scripts and their respective `readmes` are found in,
+
+*   `./additional_resources/k8s_dashboard/`: Deploy the Kubernetes Dashboard.
+*   `./additional_resources/k8s_maintenance/`: Deploy the Kubernetes Cluster.
+*   `./additional_resources/ansible_web_deploy/`: Deploy Nginx web server via Ansible on the pre-provisioned the EC2 instance. (tools_ec2).
+
+
+## Infrastructure to be Provisioned
 
 This project will create the following resources in the `eu-west-1` region:
 
@@ -63,3 +70,150 @@ This project will create the following resources in the `eu-west-1` region:
         *   Port 80 (TCP), forwarding to the Kubernetes nodes on port 80.
         *   Port 443 (TCP), forwarding to the Kubernetes nodes on port 443.
     *   Target groups will point to the two Kubernetes nodes.
+
+## Terraform apply output:
+```
+module.vpc.aws_eip.nat: Creating...
+module.vpc.aws_vpc.main: Creating...
+module.ec2.aws_key_pair.imported_tf_managed: Creating...
+module.ec2.aws_key_pair.imported_tf_managed: Creation complete after 0s [id=tf-managed-key]
+module.vpc.aws_eip.nat: Creation complete after 0s [id=eipalloc-09d7e78a1de9177a3]
+module.vpc.aws_vpc.main: Still creating... [00m10s elapsed]
+module.vpc.aws_vpc.main: Creation complete after 11s [id=vpc-00da8dfd5479ccb03]
+module.vpc.aws_subnet.public2: Creating...
+module.vpc.aws_route_table.public: Creating...
+module.load_balancer.aws_lb_target_group.tg_https: Creating...
+module.vpc.aws_route_table.private: Creating...
+module.sg.aws_security_group.sg1: Creating...
+module.vpc.aws_subnet.private1: Creating...
+module.vpc.aws_subnet.public1: Creating...
+module.vpc.aws_internet_gateway.igw: Creating...
+module.vpc.aws_subnet.private2: Creating...
+module.load_balancer.aws_lb_target_group.tg_http: Creating...
+module.vpc.aws_internet_gateway.igw: Creation complete after 1s [id=igw-068867e8439a42b8e]
+module.vpc.aws_route_table.public: Creation complete after 1s [id=rtb-040a80324b9cd49b8]
+module.vpc.aws_route.public_default: Creating...
+module.vpc.aws_route_table.private: Creation complete after 1s [id=rtb-06161833a420f9546]
+module.load_balancer.aws_lb_target_group.tg_http: Creation complete after 1s [id=arn:aws:elasticloadbalancing:eu-west-1:723307514167:targetgroup/Ss86-tg-http/ada590ab70e8c5d7]
+module.load_balancer.aws_lb_target_group.tg_https: Creation complete after 1s [id=arn:aws:elasticloadbalancing:eu-west-1:723307514167:targetgroup/Ss86-tg-https/92e959256fc2dc5b]
+module.vpc.aws_subnet.private2: Creation complete after 1s [id=subnet-0d1e211a431e06463]
+module.vpc.aws_route_table_association.private2: Creating...
+module.vpc.aws_route_table_association.private2: Creation complete after 0s [id=rtbassoc-0cf914e1c94d6e094]
+module.vpc.aws_route.public_default: Creation complete after 0s [id=r-rtb-040a80324b9cd49b81080289494]
+module.sg.aws_security_group.sg1: Creation complete after 2s [id=sg-0ba04c8dfa841071a]
+module.sg.aws_security_group.sg2: Creating...
+module.sg.aws_security_group.sg2: Creation complete after 1s [id=sg-0589df93864dbfd13]
+module.ec2.aws_instance.k8s_node2: Creating...
+module.vpc.aws_subnet.private1: Creation complete after 4s [id=subnet-0c7a435ff04846dda]
+module.vpc.aws_route_table_association.private1: Creating...
+module.ec2.aws_instance.k8s_node1: Creating...
+module.vpc.aws_route_table_association.private1: Creation complete after 0s [id=rtbassoc-04fb4f443531c6a6d]
+module.vpc.aws_subnet.public2: Still creating... [00m10s elapsed]
+module.vpc.aws_subnet.public1: Still creating... [00m10s elapsed]
+module.vpc.aws_subnet.public2: Creation complete after 11s [id=subnet-08347d360ef20883e]
+module.vpc.aws_route_table_association.public2: Creating...
+module.vpc.aws_route_table_association.public2: Creation complete after 0s [id=rtbassoc-051fbca30ac7c402c]
+module.ec2.aws_instance.k8s_node2: Still creating... [00m10s elapsed]
+module.ec2.aws_instance.k8s_node1: Still creating... [00m10s elapsed]
+module.vpc.aws_subnet.public1: Creation complete after 14s [id=subnet-07eb63bcd09f5ce75]
+module.vpc.aws_route_table_association.public1: Creating...
+module.vpc.aws_nat_gateway.nat: Creating...
+module.load_balancer.aws_lb.nlb: Creating...
+module.ec2.aws_instance.jump_box: Creating...
+module.vpc.aws_route_table_association.public1: Creation complete after 0s [id=rtbassoc-0908316d58bb6eed2]
+module.ec2.aws_instance.k8s_node2: Creation complete after 13s [id=i-01fcd5abf30dd755b]
+module.load_balancer.aws_lb_target_group_attachment.tg_attachment_http2: Creating...
+module.load_balancer.aws_lb_target_group_attachment.tg_attachment_https2: Creating...
+module.load_balancer.aws_lb_target_group_attachment.tg_attachment_https2: Creation complete after 0s [id=arn:aws:elasticloadbalancing:eu-west-1:723307514167:targetgroup/Ss86-tg-https/92e959256fc2dc5b-20250808085613733900000004]
+module.ec2.aws_instance.k8s_node1: Creation complete after 12s [id=i-0b2e0e59d2805710f]
+module.load_balancer.aws_lb_target_group_attachment.tg_attachment_http: Creating...
+module.load_balancer.aws_lb_target_group_attachment.tg_attachment_https: Creating...
+module.load_balancer.aws_lb_target_group_attachment.tg_attachment_http2: Creation complete after 0s [id=arn:aws:elasticloadbalancing:eu-west-1:723307514167:targetgroup/Ss86-tg-http/ada590ab70e8c5d7-20250808085613799200000005]
+module.load_balancer.aws_lb_target_group_attachment.tg_attachment_http: Creation complete after 0s [id=arn:aws:elasticloadbalancing:eu-west-1:723307514167:targetgroup/Ss86-tg-http/ada590ab70e8c5d7-20250808085613932800000006]
+module.load_balancer.aws_lb_target_group_attachment.tg_attachment_https: Creation complete after 0s [id=arn:aws:elasticloadbalancing:eu-west-1:723307514167:targetgroup/Ss86-tg-https/92e959256fc2dc5b-20250808085613962900000007]
+module.vpc.aws_nat_gateway.nat: Still creating... [00m10s elapsed]
+module.load_balancer.aws_lb.nlb: Still creating... [00m10s elapsed]
+module.ec2.aws_instance.jump_box: Still creating... [00m10s elapsed]
+module.ec2.aws_instance.jump_box: Creation complete after 12s [id=i-0139e554f764f9528]
+module.vpc.aws_nat_gateway.nat: Still creating... [00m20s elapsed]
+module.load_balancer.aws_lb.nlb: Still creating... [00m20s elapsed]
+module.vpc.aws_nat_gateway.nat: Still creating... [00m30s elapsed]
+module.load_balancer.aws_lb.nlb: Still creating... [00m30s elapsed]
+module.vpc.aws_nat_gateway.nat: Still creating... [00m40s elapsed]
+module.load_balancer.aws_lb.nlb: Still creating... [00m40s elapsed]
+module.vpc.aws_nat_gateway.nat: Still creating... [00m50s elapsed]
+module.load_balancer.aws_lb.nlb: Still creating... [00m50s elapsed]
+module.vpc.aws_nat_gateway.nat: Still creating... [01m00s elapsed]
+module.load_balancer.aws_lb.nlb: Still creating... [01m00s elapsed]
+module.vpc.aws_nat_gateway.nat: Still creating... [01m10s elapsed]
+module.load_balancer.aws_lb.nlb: Still creating... [01m10s elapsed]
+module.vpc.aws_nat_gateway.nat: Still creating... [01m20s elapsed]
+module.load_balancer.aws_lb.nlb: Still creating... [01m20s elapsed]
+module.vpc.aws_nat_gateway.nat: Still creating... [01m30s elapsed]
+module.load_balancer.aws_lb.nlb: Still creating... [01m30s elapsed]
+module.vpc.aws_nat_gateway.nat: Still creating... [01m40s elapsed]
+module.load_balancer.aws_lb.nlb: Still creating... [01m40s elapsed]
+module.vpc.aws_nat_gateway.nat: Creation complete after 1m43s [id=nat-04d2f96b41b9d5e0f]
+module.vpc.aws_route.private_default: Creating...
+module.vpc.aws_route.private_default: Creation complete after 1s [id=r-rtb-06161833a420f95461080289494]
+module.load_balancer.aws_lb.nlb: Still creating... [01m50s elapsed]
+module.load_balancer.aws_lb.nlb: Still creating... [02m00s elapsed]
+module.load_balancer.aws_lb.nlb: Still creating... [02m10s elapsed]
+module.load_balancer.aws_lb.nlb: Still creating... [02m20s elapsed]
+module.load_balancer.aws_lb.nlb: Still creating... [02m30s elapsed]
+module.load_balancer.aws_lb.nlb: Still creating... [02m40s elapsed]
+module.load_balancer.aws_lb.nlb: Creation complete after 2m41s [id=arn:aws:elasticloadbalancing:eu-west-1:723307514167:loadbalancer/net/Ss86-nlb/e3b661017739f32c]
+module.load_balancer.aws_lb_listener.listener_http: Creating...
+module.load_balancer.aws_lb_listener.listener_https: Creating...
+module.load_balancer.aws_lb_listener.listener_http: Creation complete after 0s [id=arn:aws:elasticloadbalancing:eu-west-1:723307514167:listener/net/Ss86-nlb/e3b661017739f32c/eb2230f3524e0e92]
+module.load_balancer.aws_lb_listener.listener_https: Creation complete after 0s [id=arn:aws:elasticloadbalancing:eu-west-1:723307514167:listener/net/Ss86-nlb/e3b661017739f32c/d70fc54f2b37556a]
+
+Apply complete! Resources: 31 added, 0 changed, 0 destroyed.
+
+Outputs:
+
+all_private_subnet_ids = [
+  "subnet-0c7a435ff04846dda",
+  "subnet-0d1e211a431e06463",
+]
+all_public_subnet_ids = [
+  "subnet-07eb63bcd09f5ce75",
+  "subnet-08347d360ef20883e",
+]
+internet_gateway_id = "igw-068867e8439a42b8e"
+jump_box_id = "i-0ef3b5d0e53783b75"
+jump_box_private_ip = "172.18.1.83"
+jump_box_public_ip = "176.34.137.125"
+k8s_node1_id = "i-0293e94897525f46e"
+k8s_node1_private_ip = "172.18.3.234"
+k8s_node2_id = "i-0e1f966e8804b2ba7"
+k8s_node2_private_ip = "172.18.4.193"
+nat_gateway_eip_public_ip = "54.154.31.71"
+nat_gateway_id = "nat-04d2f96b41b9d5e0f"
+nat_gateway_public_subnet_id = "subnet-07eb63bcd09f5ce75"
+nlb_dns_name = "ss86-nlb-3ecb186efbab9e44.elb.eu-west-1.amazonaws.com"
+nlb_zone_id = "Z2IFOLAFXWLO4F"
+private_route_table_id = "rtb-06161833a420f9546"
+private_subnet1_arn = "arn:aws:ec2:eu-west-1:723307514167:subnet/subnet-0c7a435ff04846dda"
+private_subnet1_availability_zone = "eu-west-1a"
+private_subnet1_cidr_block = "172.18.3.0/24"
+private_subnet1_id = "subnet-07eb63bcd09f5ce75"
+private_subnet2_arn = "arn:aws:ec2:eu-west-1:723307514167:subnet/subnet-0d1e211a431e06463"
+private_subnet2_availability_zone = "eu-west-1b"
+private_subnet2_cidr_block = "172.18.4.0/24"
+private_subnet2_id = "subnet-0d1e211a431e06463"
+public_route_table_id = "rtb-040a80324b9cd49b8"
+public_subnet1_arn = "arn:aws:ec2:eu-west-1:723307514167:subnet/subnet-0c7a435ff04846dda"
+public_subnet1_availability_zone = "eu-west-1a"
+public_subnet1_cidr_block = "172.18.1.0/24"
+public_subnet1_id = "subnet-07eb63bcd09f5ce75"
+public_subnet2_arn = "arn:aws:ec2:eu-west-1:723307514167:subnet/subnet-08347d360ef20883e"
+public_subnet2_availability_zone = "eu-west-1b"
+public_subnet2_cidr_block = "172.18.10.0/24"
+public_subnet2_id = "subnet-08347d360ef20883e"
+sg1_id = "sg-0ba04c8dfa841071a"
+sg2_id = "sg-0589df93864dbfd13"
+vpc_arn = "arn:aws:ec2:eu-west-1:723307514167:vpc/vpc-00da8dfd5479ccb03"
+vpc_cidr_block = "172.18.0.0/16"
+
+```
