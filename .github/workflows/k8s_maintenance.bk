@@ -1,3 +1,8 @@
+##########################################################################################################################
+# It would also be greate to automate the steps followed when creating the cluster so that it can be easier to maintain. #
+# The also goes well with the DevOps practice of automation for repeatability.                                           #
+##########################################################################################################################
+
 name: K8s Maintenance
 
 on:

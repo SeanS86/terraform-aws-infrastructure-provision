@@ -1,3 +1,41 @@
+# Deploying K8s Dashboard
+The dashboard was deployed by running a combination of `helm` and `kubectl` commands. And the yaml files use are saved in `./main_yamls` directory.
+
+### Steps:
+
+1.  **Deployed the Helm chart:**
+```
+helm repo add kubernetes-dashboard https://kubernetes.github.io/dashboard/ --force-update
+helm repo update
+
+helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard \
+  --namespace kubernetes-dashboard \
+  -f dashboard-values.yaml \
+  --atomic \
+  --timeout 10m0s \
+  --wait
+
+```
+
+2.  **Verifying Deployment**
+```
+kubectl get pods -n kubernetes-dashboard
+kubectl get svc kubernetes-dashboard -n kubernetes-dashboard
+```
+3.  **Applying admin configuration**
+```
+kubectl apply -f dashboard-admin.yaml -n kubernetes-dashboard
+```
+
+4.  **To get the admin token**
+```
+kubectl create token admin-user -n kubernetes-dashboard --duration=24h
+``` 
+5.  **Accessing the dashboard**
+*   **HTTPS (port 443) (we generated a self-signed certificate):**
+    Open the web browser and go to `https://ss86-nlb-3ecb186efbab9e44.elb.eu-west-1.amazonaws.com`
+
+
 # 1. Troubleshooting: Kong Configuration for Kubernetes Dashboard NodePort Access
 
 This section details the Kubernetes and Kong configurations that enable access to the Kubernetes Dashboard via Kong on a specific NodePort (e.g., `30865`). This setup is common when using Kong as an Ingress controller or an API gateway in front of services like the Kubernetes Dashboard.
@@ -60,9 +98,11 @@ The `curl -vki https://172.18.4.193:30865` test successfully returning the dashb
 ## Summary
 
 The ability for Kong to listen on port `30865` and serve the Kubernetes Dashboard is achieved by:
-1.  Defining the Kong proxy's Kubernetes `Service` as `type: NodePort` with `nodePort: 30865` and mapping it to Kong's internal HTTPS listener port. And this was achieved by applying yaml files in `./adhoc` subdirectory.
+1.  Defining the Kong proxy's Kubernetes `Service` as `type: NodePort` with `nodePort: 30865` and mapping it to Kong's internal HTTPS listener port. And this was achieved by applying yaml files in `./adhoc_yamls` subdirectory.
 2.  Ensuring Kong has the necessary routing rules (via Ingress, TCPIngress, or its configuration) to forward requests received on that internal port to the upstream `kubernetes-dashboard` service.
-    The following `ingress` block was added to the `aws_security_group` resource corresponding to `sg-0589df93864dbfd13`:
+    The following `ingress` block was added to the `aws_security_group` resource corresponding to `sg-0589df93864dbfd13`
+3.  A tls secret was create the store the self-signed certificate for the dashboard since the offloading is handled by Kong. Note that the `load_balancer` only server as a passthrough.
+
 
 
 # 2. Troubleshooting: Kubernetes Dashboard Access via NLB
