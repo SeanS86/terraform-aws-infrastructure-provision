@@ -33,6 +33,7 @@ kubectl create token admin-user -n kubernetes-dashboard --duration=24h
 ``` 
 5.  **Accessing the dashboard**
 *   **HTTPS (port 443) (we generated a self-signed certificate):**
+
     Open the web browser and go to `https://ss86-nlb-3ecb186efbab9e44.elb.eu-west-1.amazonaws.com`
 
 

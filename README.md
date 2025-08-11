@@ -11,13 +11,14 @@ The project is organized into the following Terraform modules:
 *   `./modules/ec2/`: Provisions the EC2 instances (jump box and Kubernetes worker nodes).
 *   `./modules/load_balancer/`: Sets up the Network Load Balancer to expose services.
 
+The root directory contains the main configuration files that orchestrate these modules.
+
 ***PLEASE NOTE:*** There are other resources that will be commissioned to run on the infrastructure. All the setup scripts and their respective `readmes` are found in,
 
 *   `./additional_resources/k8s_dashboard/`: Deploy the Kubernetes Dashboard.
-*   `./additional_resources/k8s_maintenance/`: Deploy the Kubernetes Maintenance.
+*   `./additional_resources/k8s_maintenance/`: Deploy the Kubernetes Cluster.
 *   `./additional_resources/ansible_web_deploy/`: Deploy Nginx web server via Ansible on the pre-provisioned the EC2 instance. (tools_ec2).
 
-The root directory contains the main configuration files that orchestrate these modules.
 
 ## Infrastructure Provisioned
 
