@@ -105,3 +105,146 @@ ubuntu@ip-172-19-0-96:~/terraform-aws-infrastructure-provision$ aws elbv2 descri
         }
     ]
 }
+
+ubuntu@ip-172-19-0-96:~/terraform-aws-infrastructure-provision$ aws ec2 describe-security-groups --group-ids sg-0ba04c8dfa841071a --region eu-west-1 --output json
+{
+    "SecurityGroups": [
+        {
+            "GroupId": "sg-0ba04c8dfa841071a",
+            "IpPermissionsEgress": [
+                {
+                    "IpProtocol": "-1",
+                    "UserIdGroupPairs": [],
+                    "IpRanges": [
+                        {
+                            "CidrIp": "0.0.0.0/0"
+                        }
+                    ],
+                    "Ipv6Ranges": [],
+                    "PrefixListIds": []
+                }
+            ],
+            "Tags": [
+                {
+:...skipping...
+{
+    "SecurityGroups": [
+        {
+            "GroupId": "sg-0ba04c8dfa841071a",
+            "IpPermissionsEgress": [
+                {
+                    "IpProtocol": "-1",
+                    "UserIdGroupPairs": [],
+                    "IpRanges": [
+                        {
+                            "CidrIp": "0.0.0.0/0"
+                        }
+                    ],
+                    "Ipv6Ranges": [],
+                    "PrefixListIds": []
+                }
+            ],
+            "Tags": [
+                {
+                    "Key": "Role",
+                    "Value": "BastionAccess"
+                },
+                {
+                    "Key": "Name",
+                    "Value": "Ss86-sg1-bastion-access"
+                }
+            ],
+            "VpcId": "vpc-00da8dfd5479ccb03",
+            "SecurityGroupArn": "arn:aws:ec2:eu-west-1:723307514167:security-group/sg-0ba04c8dfa841071a",
+            "OwnerId": "723307514167",
+            "GroupName": "Ss86-sg1-bastion-access",
+            "Description": "Allow SSH from Tools EC2 to Bastion/Jumpbox",
+            "IpPermissions": [
+                {
+                    "IpProtocol": "tcp",
+                    "FromPort": 22,
+                    "ToPort": 22,
+                    "UserIdGroupPairs": [],
+                    "IpRanges": [
+                        {
+                            "Description": "SSH from Tools EC2",
+                            "CidrIp": "3.255.177.47/32"
+                        }
+                    ],
+                    "Ipv6Ranges": [],
+                    "PrefixListIds": []
+                }
+            ]
+:
+
+
+ubuntu@ip-172-19-0-96:~/terraform-aws-infrastructure-provision$ aws ec2 describe-security-groups --group-ids sg-0589df93864dbfd13 --region eu-west-1 --output json
+{
+    "SecurityGroups": [
+        {
+            "GroupId": "sg-0589df93864dbfd13",
+            "IpPermissionsEgress": [
+                {
+                    "IpProtocol": "-1",
+                    "UserIdGroupPairs": [],
+                    "IpRanges": [
+                        {
+                            "CidrIp": "0.0.0.0/0"
+                        }
+                    ],
+                    "Ipv6Ranges": [],
+                    "PrefixListIds": []
+                }
+            ],
+            "Tags": [
+                {
+:...skipping...
+{
+    "SecurityGroups": [
+        {
+            "GroupId": "sg-0589df93864dbfd13",
+            "IpPermissionsEgress": [
+                {
+                    "IpProtocol": "-1",
+                    "UserIdGroupPairs": [],
+                    "IpRanges": [
+                        {
+                            "CidrIp": "0.0.0.0/0"
+                        }
+                    ],
+                    "Ipv6Ranges": [],
+                    "PrefixListIds": []
+                }
+            ],
+            "Tags": [
+                {
+                    "Key": "Role",
+                    "Value": "Application"
+                },
+                {
+                    "Key": "Name",
+                    "Value": "Ss86-sg2-application"
+                }
+            ],
+            "VpcId": "vpc-00da8dfd5479ccb03",
+            "SecurityGroupArn": "arn:aws:ec2:eu-west-1:723307514167:security-group/sg-0589df93864dbfd13",
+            "OwnerId": "723307514167",
+            "GroupName": "Ss86-sg2-application",
+            "Description": "Application Security Group",
+            "IpPermissions": [
+                {
+                    "IpProtocol": "tcp",
+                    "FromPort": 80,
+                    "ToPort": 80,
+                    "UserIdGroupPairs": [],
+                    "IpRanges": [
+                        {
+                            "Description": "HTTP access",
+                            "CidrIp": "0.0.0.0/0"
+                        }
+                    ],
+                    "Ipv6Ranges": [],
+                    "PrefixListIds": []
+                },
+                {
+:
